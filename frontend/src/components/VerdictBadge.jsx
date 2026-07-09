@@ -24,7 +24,7 @@ export default function VerdictBadge({ verdict }) {
   return (
     <span
       className={
-        "inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-semibold " +
+        "inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-body font-semibold " +
         style.bg +
         " " +
         style.text

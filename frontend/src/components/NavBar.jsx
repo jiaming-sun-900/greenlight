@@ -12,7 +12,7 @@ export default function NavBar({ activeTab, onTabChange }) {
             aria-hidden
             className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500"
           />
-          <span className="text-lg font-semibold tracking-tight text-text">
+          <span className="text-title font-semibold tracking-tight text-text">
             Greenlight
           </span>
         </div>
@@ -25,7 +25,7 @@ export default function NavBar({ activeTab, onTabChange }) {
                 type="button"
                 onClick={() => onTabChange(tab.id)}
                 className={
-                  "rounded-full px-4 py-1.5 text-sm font-medium transition-colors " +
+                  "rounded-full px-4 py-1.5 text-body font-medium transition-colors " +
                   (isActive
                     ? "bg-accent text-white"
                     : "text-gray-600 hover:bg-gray-100 hover:text-text")

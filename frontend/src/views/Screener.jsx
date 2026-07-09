@@ -53,10 +53,10 @@ export default function Screener() {
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-text">
+        <h1 className="text-page font-semibold tracking-tight text-text">
           Screen a job posting
         </h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-body text-gray-500">
           Paste a job description to check visa eligibility for international
           students.
         </p>
@@ -69,10 +69,10 @@ export default function Screener() {
           className="flex flex-col rounded-2xl border border-gray-200 bg-white shadow-sm"
         >
           <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
-            <h2 className="text-sm font-medium text-gray-700">
+            <h2 className="text-panel font-medium text-gray-700">
               Job description
             </h2>
-            <span className="text-xs text-gray-400">
+            <span className="text-label text-gray-400">
               {jobDescription.length.toLocaleString()} chars
             </span>
           </div>
@@ -80,7 +80,7 @@ export default function Screener() {
             value={jobDescription}
             onChange={(e) => setJobDescription(e.target.value)}
             placeholder="Paste a full job description here..."
-            className="min-h-[480px] flex-1 resize-none rounded-b-2xl bg-white px-5 py-4 text-sm leading-relaxed text-gray-800 placeholder:text-gray-400 focus:outline-none"
+            className="min-h-[480px] flex-1 resize-none rounded-b-2xl bg-white px-5 py-4 text-body leading-relaxed text-gray-800 placeholder:text-gray-400 focus:outline-none"
           />
         </section>
 
@@ -90,8 +90,8 @@ export default function Screener() {
           className="flex flex-col rounded-2xl border border-gray-200 bg-white shadow-sm"
         >
           <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
-            <h2 className="text-sm font-medium text-gray-700">Analysis</h2>
-            <span className="text-xs text-gray-400">
+            <h2 className="text-panel font-medium text-gray-700">Analysis</h2>
+            <span className="text-label text-gray-400">
               {loading ? "Analyzing…" : result ? "Result" : "Preview"}
             </span>
           </div>
@@ -112,7 +112,7 @@ export default function Screener() {
         <button
           type="button"
           onClick={handleAnalyze}
-          className="rounded-full bg-accent px-8 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-gray-300"
+          className="rounded-full bg-accent px-8 py-2.5 text-body font-medium text-white shadow-sm transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-gray-300"
           disabled={jobDescription.trim().length === 0 || loading}
         >
           {loading ? "Analyzing…" : "Analyze"}
@@ -133,7 +133,7 @@ function ResultView({ result }) {
           <button
             type="button"
             onClick={() => setShowReasons(true)}
-            className="text-xs font-medium text-gray-500 underline-offset-2 hover:text-gray-900 hover:underline"
+            className="text-body font-medium text-gray-500 underline-offset-2 hover:text-gray-900 hover:underline"
           >
             Why this verdict?
           </button>
@@ -156,7 +156,7 @@ function ResultView({ result }) {
       <div className="border-t border-gray-100 px-5 py-4">
         <button
           type="button"
-          className="w-full rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-500"
+          className="w-full rounded-lg bg-gray-100 px-4 py-2.5 text-body font-medium text-gray-500"
           disabled
         >
           Add to Tracker →
@@ -177,8 +177,8 @@ function ResultView({ result }) {
 function EmptyState() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-2 px-5 py-16 text-center">
-      <p className="text-sm text-gray-500">No analysis yet</p>
-      <p className="max-w-xs text-xs text-gray-400">
+      <p className="text-body text-gray-500">No analysis yet</p>
+      <p className="max-w-xs text-label text-gray-400">
         Paste a job description on the left and press Analyze to see the visa
         eligibility verdict here.
       </p>
@@ -209,11 +209,11 @@ function LoadingState() {
 function ErrorState({ message }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-5 py-16 text-center">
-      <div className="rounded-full bg-[#fee2e2] px-3.5 py-1.5 text-sm font-semibold text-red-900">
+      <div className="rounded-full bg-[#fee2e2] px-3.5 py-1.5 text-body font-semibold text-red-900">
         Analysis failed
       </div>
-      <p className="max-w-sm text-xs leading-relaxed text-gray-500">{message}</p>
-      <p className="text-xs text-gray-400">
+      <p className="max-w-sm text-body leading-relaxed text-gray-500">{message}</p>
+      <p className="text-label text-gray-400">
         Check that the backend is running, then press Analyze again.
       </p>
     </div>
@@ -223,13 +223,13 @@ function ErrorState({ message }) {
 function Field({ label, value, multiline = false, muted = false }) {
   return (
     <div>
-      <div className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-400">
+      <div className="mb-1 text-label font-medium uppercase tracking-wide text-gray-400">
         {label}
       </div>
       <div
         className={
           (multiline ? "leading-relaxed" : "") +
-          " text-sm " +
+          " text-body " +
           (muted ? "text-gray-400" : "text-gray-800")
         }
       >
@@ -243,13 +243,13 @@ function BulletField({ label, items }) {
   const list = Array.isArray(items) ? items : [];
   return (
     <div>
-      <div className="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">
+      <div className="mb-1.5 text-label font-medium uppercase tracking-wide text-gray-400">
         {label}
       </div>
       {list.length === 0 ? (
-        <div className="text-sm text-gray-400">-</div>
+        <div className="text-body text-gray-400">-</div>
       ) : (
-        <ul className="space-y-1 text-sm text-gray-800">
+        <ul className="space-y-1 text-body text-gray-800">
           {list.map((item, idx) => (
             <li key={idx} className="flex gap-2">
               <span

@@ -6,6 +6,19 @@
   --color-accent: #16a34a;
   --color-accent-hover: #15803d;
   --font-sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Font size hierarchy (see CLAUDE.md > Typography scale).
+     Use these tokens instead of ad hoc text-xs / text-sm / text-lg sizes. */
+  --text-label: 14px; /* small uppercase labels + metadata */
+  --text-label--line-height: 1.3;
+  --text-body: 16px; /* body text + form inputs (base) */
+  --text-body--line-height: 1.5;
+  --text-title: 20px; /* card titles, section labels, secondary headings */
+  --text-title--line-height: 1.4;
+  --text-panel: 24px; /* panel headers */
+  --text-panel--line-height: 1.3;
+  --text-page: 28px; /* main page title */
+  --text-page--line-height: 1.2;
 }
 
 :root {

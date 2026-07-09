@@ -46,7 +46,7 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-          <h2 className="text-base font-semibold text-text">Why this verdict?</h2>
+          <h2 className="text-title font-semibold text-text">Why this verdict?</h2>
           <button
             type="button"
             onClick={onClose}
@@ -70,7 +70,7 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
           </div>
 
           {list.length === 0 ? (
-            <p className="text-sm text-gray-500">
+            <p className="text-body text-gray-500">
               No specific signals were recorded for this verdict.
             </p>
           ) : (
@@ -80,18 +80,18 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
                   key={idx}
                   className="rounded-lg border border-gray-100 bg-gray-50 px-3.5 py-3"
                 >
-                  <div className="text-sm font-medium text-gray-800">
+                  <div className="text-body font-medium text-gray-800">
                     {labelForTag(reason.tag)}
                   </div>
                   {reason.detected_phrase ? (
-                    <div className="mt-1 text-sm text-gray-600">
+                    <div className="mt-1 text-body text-gray-600">
                       Detected:{" "}
                       <span className="italic text-gray-800">
                         “{reason.detected_phrase}”
                       </span>
                     </div>
                   ) : (
-                    <div className="mt-1 text-sm text-gray-500">
+                    <div className="mt-1 text-body text-gray-500">
                       No visa, sponsorship, or work-authorization language found.
                     </div>
                   )}
@@ -105,7 +105,7 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+            className="w-full rounded-lg bg-accent px-4 py-2.5 text-body font-medium text-white transition-colors hover:bg-accent-hover"
           >
             Close
           </button>
