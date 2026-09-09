@@ -21,15 +21,16 @@ export default function App() {
   const clearHighlight = useCallback(() => setHighlightId(null), []);
 
   return (
-    // Pinned to the viewport from `lg` up so the two screener panels scroll
-    // internally instead of pushing the Analyze button below the fold.
-    <div className="flex min-h-dvh flex-col bg-bg text-text lg:h-dvh lg:overflow-hidden">
+    // Pinned to the viewport from `md` up so the two screener panels scroll
+    // internally instead of pushing the Analyze button below the fold. Below
+    // `md` the panels stack and the page scrolls as one.
+    <div className="flex min-h-dvh flex-col bg-bg text-text md:h-dvh md:overflow-hidden">
       <NavBar
         activeTab={activeTab}
         onTabChange={setActiveTab}
         trackedCount={cards.length}
       />
-      <main className="flex flex-1 flex-col lg:min-h-0">
+      <main className="flex flex-1 flex-col md:min-h-0">
         {activeTab === "screener" ? (
           <Screener onAddToTracker={handleAddToTracker} />
         ) : (

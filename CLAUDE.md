@@ -28,6 +28,13 @@ Notes on the scale:
 - Weight and tracking are part of the tier, not a per-instance choice. Use the pairing in the table. Color stays free (`text-gray-*`) since it encodes emphasis, not rank.
 - Icon and glyph sizes are not type. Decorative glyphs use the `icon-lg` utility (backed by `--icon-lg` in `@theme`), never a `text-*` token borrowed as a font-size hack.
 
+## Layout and responsiveness
+
+- **One breakpoint carries the app: `md` (768px).** Below it the screener's two panels stack into a single column and the page scrolls normally. From `md` up they sit side by side and the app is pinned to the viewport (`md:h-dvh md:overflow-hidden` in `App.jsx`), with each panel scrolling internally. Keep the stacking breakpoint and the pinning breakpoint the same; splitting them produces a width where side-by-side panels are not height-managed.
+- **Panels are fluid, text is not.** Containers stretch with the viewport (the screener caps at `1800px`, the tracker at `1600px`). Prose, form fields, and buttons inside a panel are held to a readable measure of roughly 70 characters via the `MEASURE` constant in `views/Screener.jsx`. Panel header rows are exempt: their title and metadata belong at the panel's edges.
+- **The tracker board does not reflow.** Columns keep a fixed `w-72` and the row scrolls horizontally, which is what makes five stages usable on a phone. No scroll snapping: it fights an in-progress drag.
+- Horizontal page padding steps `px-4` -> `sm:px-6` -> `xl:px-10` rather than sitting at a single value, so a 375px viewport does not lose 48px to gutters.
+
 ## Writing style
 
 - No em dashes in anything the user sees: UI text, and messages written to the user. Use hyphens, colons, or reworded sentences instead. Em dashes inside code comments or internal prompt strings (things the user will not read) are fine.

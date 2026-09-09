@@ -6,6 +6,12 @@ import { toISODate } from "../lib/dates.js";
 
 const SCREEN_ENDPOINT = "http://localhost:8000/screen";
 
+// Panels stretch with the viewport, but prose inside them does not: past roughly
+// 70 characters a line gets hard to track back from. Applied to the text content
+// of each panel, never to the panel or its header row. Left aligned rather than
+// centered, so content stays flush with the panel header above it.
+const MEASURE = "w-full max-w-[70ch]";
+
 /** Shape the backend response into the editable draft the panel works with. */
 function toDraft(data) {
   return {
@@ -79,10 +85,12 @@ export default function Screener({ onAddToTracker }) {
   }
 
   return (
-    // Below `lg` the panels stack and the page scrolls normally. From `lg` up the
-    // view is pinned to the viewport: each panel scrolls internally so Analyze
-    // never gets pushed off the bottom, however long the posting is.
-    <div className="mx-auto flex max-w-6xl flex-col px-6 py-6 lg:h-full">
+    // Below `md` the panels stack into one column and the page scrolls normally.
+    // From `md` up they sit side by side and the view is pinned to the viewport:
+    // each panel scrolls internally so Analyze never gets pushed off the bottom,
+    // however long the posting is. The panels themselves are fluid; it is the
+    // text inside them that is held to a readable measure (see MEASURE).
+    <div className="mx-auto flex w-full max-w-[1800px] flex-col px-4 py-6 sm:px-6 md:h-full xl:px-10">
       <header className="mb-5 shrink-0">
         <h1 className="text-display font-semibold tracking-tight text-text">
           Screen a job posting
@@ -93,7 +101,7 @@ export default function Screener({ onAddToTracker }) {
         </p>
       </header>
 
-      <div className="grid grid-cols-1 gap-5 lg:min-h-0 lg:flex-1 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 md:min-h-0 md:flex-1 md:grid-cols-2">
         {/* Left panel - input */}
         <section
           aria-label="Job description input"
@@ -107,12 +115,19 @@ export default function Screener({ onAddToTracker }) {
               {jobDescription.length.toLocaleString()} chars
             </span>
           </div>
-          <textarea
-            value={jobDescription}
-            onChange={(e) => setJobDescription(e.target.value)}
-            placeholder="Paste a full job description here..."
-            className="min-h-[300px] flex-1 resize-none overflow-y-auto rounded-b-2xl bg-white px-5 py-4 text-body leading-relaxed text-gray-800 placeholder:text-gray-400 focus:outline-none lg:min-h-0"
-          />
+          <div className="flex min-h-0 flex-1 rounded-b-2xl bg-white">
+            <textarea
+              value={jobDescription}
+              onChange={(e) => setJobDescription(e.target.value)}
+              placeholder="Paste a full job description here..."
+              className={
+                "min-h-[300px] w-full resize-none overflow-y-auto bg-transparent px-5 py-4 " +
+                "text-body leading-relaxed text-gray-800 placeholder:text-gray-400 " +
+                "focus:outline-none md:min-h-0 " +
+                MEASURE
+              }
+            />
+          </div>
         </section>
 
         {/* Right panel - structured output */}
@@ -159,25 +174,31 @@ function ResultView({ draft, onChange, onAdd }) {
   return (
     <>
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-        <div className="mb-5 flex items-center justify-between gap-3">
-          <VerdictBadge verdict={draft.verdict} />
-          <button
-            type="button"
-            onClick={() => setShowReasons(true)}
-            className="text-body font-medium text-gray-500 underline-offset-2 hover:text-gray-900 hover:underline"
-          >
-            Why this verdict?
-          </button>
-        </div>
+        <div className={MEASURE}>
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <VerdictBadge verdict={draft.verdict} />
+            <button
+              type="button"
+              onClick={() => setShowReasons(true)}
+              className="text-body font-medium text-gray-500 underline-offset-2 hover:text-gray-900 hover:underline"
+            >
+              Why this verdict?
+            </button>
+          </div>
 
-        <JobDetailFields value={draft} onChange={onChange} />
+          <JobDetailFields value={draft} onChange={onChange} />
+        </div>
       </div>
 
       <div className="shrink-0 border-t border-gray-100 px-5 py-4">
         <button
           type="button"
           onClick={onAdd}
-          className="w-full rounded-lg bg-accent px-4 py-2.5 text-body font-medium text-white transition-colors hover:bg-accent-hover"
+          className={
+            "block rounded-lg bg-accent px-4 py-2.5 text-body font-medium " +
+            "text-white transition-colors hover:bg-accent-hover " +
+            MEASURE
+          }
         >
           Add to Tracker →
         </button>
@@ -208,7 +229,10 @@ function EmptyState() {
 
 function LoadingState() {
   return (
-    <div className="flex flex-1 flex-col gap-6 px-5 py-5" aria-busy="true">
+    <div
+      className={"flex w-full flex-1 flex-col gap-6 px-5 py-5 " + MEASURE}
+      aria-busy="true"
+    >
       <div className="flex items-center justify-between">
         <div className="h-8 w-28 animate-pulse rounded-full bg-gray-100" />
         <div className="h-3 w-20 animate-pulse rounded bg-gray-100" />

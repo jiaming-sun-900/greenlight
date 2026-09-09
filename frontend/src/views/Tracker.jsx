@@ -127,7 +127,7 @@ export default function Tracker({
   }
 
   return (
-    <div className="mx-auto flex h-full max-w-[1600px] flex-col px-6 py-6">
+    <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col px-4 py-6 sm:px-6">
       <header className="mb-5 shrink-0">
         <h1 className="text-display font-semibold tracking-tight text-text">
           Application tracker
@@ -150,7 +150,11 @@ export default function Tracker({
           onDragCancel={() => setDraggingId(null)}
           onDragEnd={handleDragEnd}
         >
-          <div className="min-h-0 flex-1 overflow-x-auto pb-2">
+          {/* The board does not reflow: columns keep their width and the row
+              scrolls sideways, which is what makes a five-stage Kanban usable
+              on a phone. Momentum scrolling only, no snap points, since snap
+              fights a drag in progress. */}
+          <div className="min-h-0 flex-1 overflow-x-auto overscroll-x-contain pb-2">
             <div className="flex h-full min-w-max gap-4">
               {COLUMNS.map((column) => (
                 <Column
