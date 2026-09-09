@@ -5,7 +5,7 @@ Visa eligibility screener and job application tracker for international students
 ## Project layout
 
 - `frontend/` - React + Vite + Tailwind CSS v4. Dev server on port 5173 (falls back to 5174).
-- `backend/` - FastAPI. Single `POST /screen` route that calls the Claude API. Dev server on port 8000.
+- `backend/` - FastAPI. Two routes: `POST /screen`, which calls the Claude API, and `GET /health`, a liveness check that returns `{"status": "ok"}`. Dev server on port 8000.
 - The backend reads `ANTHROPIC_API_KEY` from `backend/.env` (gitignored, never commit it).
 - CORS on the backend allows `http://localhost:5173` and `http://localhost:5174`.
 
@@ -26,7 +26,8 @@ When adding new UI, choose the closest tier by role rather than introducing a ne
 ## Writing style
 
 - No em dashes in anything the user sees: UI text, and messages written to the user. Use hyphens, colons, or reworded sentences instead. Em dashes inside code comments or internal prompt strings (things the user will not read) are fine.
+- Keep chat responses, explanations, and code comments concise. Don't restate context back to the user.
 
 ## Verdict model
 
-The screener returns a Red / Yellow / Green verdict plus tiered sub-reasons. Each entry in `verdict_reasons` is `{ tag, detected_phrase }`, where `tag` is one of the sub-reason strings documented in `SPEC.md` and `detected_phrase` is the quoted text (or `null` for `silent_no_signal`). The verdict tier and the sub-reason tags must always agree (green tags -> green verdict, etc.).
+The screener returns a Red / Yellow / Green verdict plus tiered sub-reasons. Each entry in `verdict_reasons` is `{ tag, detected_phrase }`, where `tag` is one of the sub-reason strings documented in `SPEC.md` and `detected_phrase` is the quoted text (or `null` for `silent_no_signal`). The verdict tier and the sub-reason tags must always agree (green tags -> green verdict, etc.). This is enforced server-side: `/screen` validates the model's output against the `ScreenResult` model in `backend/main.py` before returning it, so an unknown tag, a mixed-tier verdict, or a non-`YYYY-MM-DD` deadline is retried once and then fails with a 502 rather than reaching the client.
