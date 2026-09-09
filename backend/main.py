@@ -64,6 +64,9 @@ OPT or CPT as accepted, the verdict is GREEN with the "optcpt_overrides_generic"
 mention of OPT/CPT overrides the generic work-authorization language.
 - If the posting is completely silent on visa/sponsorship/work-authorization, the verdict is YELLOW \
 with a single "silent_no_signal" reason.
+- "deadline" must be an ISO calendar date in YYYY-MM-DD form so the UI can render it in a date \
+picker. Convert prose dates ("October 15, 2026" -> "2026-10-15"). If the posting names no \
+application deadline, or the date is too vague to resolve to a single day, use null.
 
 Respond with a single JSON object and nothing else - no markdown, no code fences, no commentary. \
 The JSON object must have exactly this shape:
@@ -77,7 +80,7 @@ The JSON object must have exactly this shape:
   "company_name": "string",
   "job_functions": "string (2-3 sentence plain-English summary of what the role does)",
   "preferred_skills": ["skill 1", "skill 2", ...],
-  "deadline": "string or null"
+  "deadline": "YYYY-MM-DD or null"
 }
 
 For each verdict_reasons entry, "tag" MUST be exactly one of the sub-reason strings listed above, \
