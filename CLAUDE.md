@@ -11,17 +11,22 @@ Visa eligibility screener and job application tracker for international students
 
 ## Typography scale
 
-Use a fixed font size hierarchy across the whole frontend. The scale is defined as Tailwind text tokens in `frontend/src/index.css` (the `@theme` block). Do not use ad hoc `text-xs` / `text-sm` / `text-base` / `text-lg` / `text-xl` sizes. Pick the tier by the element's role:
+Use a fixed font size hierarchy across the whole frontend. The scale is defined as Tailwind text tokens in `frontend/src/index.css` (the `@theme` block). Do not use ad hoc `text-xs` / `text-sm` / `text-base` / `text-lg` / `text-xl` sizes, and do not add a sixth tier. Pick the tier by the element's role:
 
-| Token        | Size | Use for |
-|--------------|------|---------|
-| `text-label` | 14px | Small uppercase labels and passive metadata: field labels ("POSITION TITLE", "COMPANY NAME"), character counts, status text, fine print |
-| `text-body`  | 16px | Base body text, form inputs, buttons, nav links, interactive links ("Why this verdict?"), field values, list items, verdict badge |
-| `text-title` | 20px | Card titles, section labels, secondary headings, the brand logo, modal titles |
-| `text-panel` | 24px | Panel headers ("Job description", "Analysis") |
-| `text-page`  | 28px | The main page title ("Screen a job posting") |
+| Token          | Size                  | Pairing                              | Use for |
+|----------------|-----------------------|--------------------------------------|---------|
+| `text-micro`   | 12px                  | `font-medium`, sentence case          | Counts, chips, badge text: nav tracked-count pill, panel char count, panel status ("Editable"), column counts, deadline badge |
+| `text-label`   | 14px                  | `font-medium uppercase tracking-wide` for field labels; plain, no tracking for passive metadata | Field labels ("POSITION TITLE"), column hints, fine print, secondary empty-state copy, card company name |
+| `text-body`    | 16px                  | `font-normal` for prose, `font-medium` for buttons and links | Base body text, form inputs, buttons, nav links, interactive links ("Why this verdict?"), field values, list items, verdict badge, Kanban card title (with `font-semibold`) |
+| `text-title`   | 20px                  | `font-semibold`                       | Panel headers ("Job description", "Analysis"), card titles, column headings, modal titles, section labels; the brand logo adds `tracking-tight` |
+| `text-display` | 28px → 36px (fluid)   | `font-semibold tracking-tight`        | The page title only ("Screen a job posting", "Application tracker"). One per view |
 
-When adding new UI, choose the closest tier by role rather than introducing a new size. Keep weight and color decisions separate from size (use `font-*` and `text-gray-*` utilities as needed).
+Notes on the scale:
+
+- `text-display` is a `clamp()`, not a fixed size: 28px on narrow viewports, ramping to 36px by roughly 1000px wide. That keeps the top of the scale loud on a desktop without swamping a 375px phone. It is reserved for the `h1` of a view; nothing else should use it.
+- There is no separate tier for panel headers. Panel headers, card titles, column headings, and modal titles are all the same rank and all use `text-title`, because that is how they actually read.
+- Weight and tracking are part of the tier, not a per-instance choice. Use the pairing in the table. Color stays free (`text-gray-*`) since it encodes emphasis, not rank.
+- Icon and glyph sizes are not type. Decorative glyphs use the `icon-lg` utility (backed by `--icon-lg` in `@theme`), never a `text-*` token borrowed as a font-size hack.
 
 ## Writing style
 

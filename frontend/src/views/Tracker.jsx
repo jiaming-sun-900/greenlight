@@ -24,7 +24,7 @@ function Column({ column, cards, onOpenCard, highlightId }) {
           <h2 className="text-title font-semibold text-gray-800">
             {column.label}
           </h2>
-          <span className="text-label tabular-nums text-gray-400">
+          <span className="text-micro tabular-nums text-gray-400">
             {cards.length}
           </span>
         </div>
@@ -60,7 +60,7 @@ function Column({ column, cards, onOpenCard, highlightId }) {
 function EmptyBoard({ onNavigateToScreener }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-      <span aria-hidden className="text-panel">
+      <span aria-hidden className="icon-lg">
         🗂️
       </span>
       <h2 className="text-title font-semibold text-gray-800">
@@ -129,7 +129,7 @@ export default function Tracker({
   return (
     <div className="mx-auto flex h-full max-w-[1600px] flex-col px-6 py-6">
       <header className="mb-5 shrink-0">
-        <h1 className="text-page font-semibold tracking-tight text-text">
+        <h1 className="text-display font-semibold tracking-tight text-text">
           Application tracker
         </h1>
         <p className="mt-1 text-body text-gray-500">

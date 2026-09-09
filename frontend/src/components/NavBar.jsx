@@ -35,7 +35,7 @@ export default function NavBar({ activeTab, onTabChange, trackedCount = 0 }) {
                 {tab.id === "tracker" && trackedCount > 0 && (
                   <span
                     className={
-                      "ml-2 rounded-full px-1.5 py-0.5 text-label tabular-nums " +
+                      "ml-2 rounded-full px-1.5 py-0.5 text-micro tabular-nums " +
                       (isActive ? "bg-white/25 text-white" : "bg-gray-200 text-gray-600")
                     }
                   >

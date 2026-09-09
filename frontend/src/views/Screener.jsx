@@ -84,7 +84,7 @@ export default function Screener({ onAddToTracker }) {
     // never gets pushed off the bottom, however long the posting is.
     <div className="mx-auto flex max-w-6xl flex-col px-6 py-6 lg:h-full">
       <header className="mb-5 shrink-0">
-        <h1 className="text-page font-semibold tracking-tight text-text">
+        <h1 className="text-display font-semibold tracking-tight text-text">
           Screen a job posting
         </h1>
         <p className="mt-1 text-body text-gray-500">
@@ -100,10 +100,10 @@ export default function Screener({ onAddToTracker }) {
           className="flex min-h-0 flex-col rounded-2xl border border-gray-200 bg-white shadow-sm"
         >
           <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-3">
-            <h2 className="text-panel font-medium text-gray-700">
+            <h2 className="text-title font-semibold text-gray-800">
               Job description
             </h2>
-            <span className="text-label tabular-nums text-gray-400">
+            <span className="text-micro tabular-nums text-gray-400">
               {jobDescription.length.toLocaleString()} chars
             </span>
           </div>
@@ -121,8 +121,8 @@ export default function Screener({ onAddToTracker }) {
           className="flex min-h-0 flex-col rounded-2xl border border-gray-200 bg-white shadow-sm"
         >
           <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-3">
-            <h2 className="text-panel font-medium text-gray-700">Analysis</h2>
-            <span className="text-label text-gray-400">
+            <h2 className="text-title font-semibold text-gray-800">Analysis</h2>
+            <span className="text-micro text-gray-400">
               {loading ? "Analyzing…" : draft ? "Editable" : "Preview"}
             </span>
           </div>
