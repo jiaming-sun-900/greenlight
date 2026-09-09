@@ -17,10 +17,11 @@ No user accounts. No login. All data persists in browser localStorage.
 ## Tech Stack
 
 - **Frontend:** React + Tailwind CSS
-- **Backend:** FastAPI (Python) or Node/Express - single API route for screening
-- **LLM:** Claude API (`claude-sonnet-4-20250514`) via Anthropic SDK
+- **Backend:** FastAPI (Python) - `POST /screen` for screening, plus a `GET /health` liveness check
+- **LLM:** Claude API (`claude-haiku-4-5-20251001`) via Anthropic SDK
 - **Drag and drop:** `dnd-kit`
-- **Deployment:** Vercel (frontend) + Railway or Render (backend)
+- **Deployment:** none configured yet. No deploy target has been chosen and the repo contains no
+  deployment config; the frontend's backend URL is currently hardcoded to `http://localhost:8000`.
 - **Persistence:** localStorage only (no database for MVP)
 
 ---
@@ -64,7 +65,7 @@ Below the badge, a small **"Why this verdict?"** link. Clicking it opens a modal
 - Company Name
 - Job Functions (2–3 sentence plain English summary of what the role does)
 - Preferred Skills (bullet list of key requirements/skills mentioned)
-- Application Deadline - input field, user can type or select a date (optional)
+- Application Deadline - date input (`YYYY-MM-DD`), user can type or select a date (optional)
 
 All fields are editable directly in the right panel. The user can correct any AI parsing errors before saving to the tracker.
 
@@ -97,7 +98,18 @@ Each card displays:
 - Card background is white or near-white so text is always readable
 - **Position Title** (bold)
 - **Company Name**
-- **Deadline badge** - if a deadline was entered and it is within 3 days, show a small orange countdown badge (e.g., "2 days left"). If past deadline, show a grey "Closed" badge.
+- **Deadline badge** - four states, so a deadline entered on a card is never invisible:
+
+| Deadline | Badge |
+|----------|-------|
+| Past | grey "Closed" |
+| Today | orange "Due today" |
+| Within 3 days | orange countdown, e.g. "2 days left" |
+| Further out | muted date, e.g. "Oct 15, 2026" |
+
+No deadline entered means no badge. The "Due today" and muted far-future states go beyond the
+original two-state design and are intentional: a bare countdown left far-off deadlines with no
+visible indication that a deadline existed at all.
 
 ### Card Expand (click to open)
 
@@ -109,8 +121,14 @@ Clicking a card opens a centered modal overlay showing the full AI-generated rep
 - Job Functions (editable)
 - Preferred Skills (editable)
 - Notes field - free text, user can add anything (interview notes, contacts, etc.)
+- **Stage** dropdown - moves the card between columns from inside the modal. Intentional addition
+  to the original field list: dragging is the primary gesture, but it is awkward on narrow screens
+  and impossible from the keyboard, so the dropdown is the accessible path to the same action.
 
-A **"Close"** button dismisses the modal. Changes auto-save to localStorage on close.
+A **"Close"** button dismisses the modal. Edits auto-save on every keystroke rather than on close:
+each change is written straight through to the card store, which persists to localStorage. This is
+intentional, and means a card can never lose edits to a refresh or a stray click on the backdrop.
+By the time the modal closes, everything is already saved.
 
 A **"Delete Card"** button (red, bottom of modal) removes the card after a confirmation prompt.
 
@@ -120,7 +138,8 @@ A **"Delete Card"** button (red, bottom of modal) removes the card after a confi
 
 ### API Call
 
-The backend receives the raw pasted text and calls the Claude API with a structured prompt.
+The backend receives the raw pasted text and calls the Claude API (`claude-haiku-4-5-20251001`)
+with a structured prompt.
 
 ### Verdict Rules
 
@@ -169,11 +188,23 @@ The LLM must return a JSON object with this exact shape:
   "company_name": "string",
   "job_functions": "string (2-3 sentences)",
   "preferred_skills": ["skill 1", "skill 2", "skill 3"],
-  "deadline": "string or null"
+  "deadline": "YYYY-MM-DD or null"
 }
 ```
 
 Each entry in `verdict_reasons` is an object with a `tag` (one of the sub-reason strings above, matching the top-level verdict's tier) and a `detected_phrase` (the exact quoted text that triggered it, or `null` for `silent_no_signal`).
+
+`deadline` must be an ISO calendar date in `YYYY-MM-DD` form, or `null`. The model converts prose
+dates itself ("March 15, 2026" becomes "2026-03-15"). If the posting names no application deadline,
+or the date is too vague to resolve to a single day, it returns `null`.
+
+### Output Validation
+
+The model's response is validated against the `ScreenResult` model in `backend/main.py` before it is
+returned to the client. Validation rejects an unknown sub-reason tag, an empty `verdict_reasons`
+list, a verdict whose tier disagrees with its tags, and a deadline that is neither `null` nor
+`YYYY-MM-DD`. An empty-string deadline is normalized to `null` rather than rejected. A validation
+failure follows the same path as unparseable JSON: retry the call once, then return a 502.
 
 ---
 
@@ -189,12 +220,14 @@ Value is a JSON array of card objects:
     "id": "uuid",
     "column": "saved" | "applied" | "interviewing" | "offer" | "closed",
     "verdict": "green" | "yellow" | "red",
-    "verdict_reasons": ["..."],
+    "verdict_reasons": [
+      { "tag": "sub-reason string", "detected_phrase": "exact quoted phrase or null" }
+    ],
     "position_title": "string",
     "company_name": "string",
     "job_functions": "string",
     "preferred_skills": ["..."],
-    "deadline": "ISO date string or null",
+    "deadline": "YYYY-MM-DD or empty string",
     "notes": "string",
     "created_at": "ISO date string"
   }
@@ -221,6 +254,23 @@ Value is a JSON array of card objects:
 - Browser extension
 - URL input with automatic job description fetching
 - Email or calendar integration for deadlines
+
+---
+
+## Known Issues
+
+Accepted for now, tracked here so they do not get rediscovered as surprises:
+
+- **Backend URL is hardcoded.** `SCREEN_ENDPOINT` in `frontend/src/views/Screener.jsx` points at
+  `http://localhost:8000` with no environment variable, so the frontend cannot be aimed at a
+  deployed backend without a code change. Blocks deployment.
+- **No test suite.** There are no tests and no CI anywhere in the repo. ESLint is configured
+  (`npm run lint`) but nothing enforces it.
+- **npm audit vulnerabilities.** `npm audit` reports 9 findings (1 low, 2 moderate, 6 high), all in
+  transitive dev-tooling dependencies (babel, browserslist, postcss, and similar). None are in
+  runtime dependencies shipped to the browser. All are fixable via `npm audit fix`.
+- **Dead files in the frontend.** `src/App.css` is the unmodified Vite template stylesheet and is
+  imported nowhere; `src/assets/hero.png`, `react.svg`, and `vite.svg` are unreferenced.
 
 ---
 
