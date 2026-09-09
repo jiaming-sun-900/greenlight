@@ -3,9 +3,9 @@ const TABS = [
   { id: "tracker", label: "Tracker" },
 ];
 
-export default function NavBar({ activeTab, onTabChange }) {
+export default function NavBar({ activeTab, onTabChange, trackedCount = 0 }) {
   return (
-    <header className="sticky top-0 z-10 border-b border-gray-200 bg-bg/90 backdrop-blur">
+    <header className="shrink-0 border-b border-gray-200 bg-bg/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <div className="flex items-center gap-2">
           <span
@@ -32,6 +32,16 @@ export default function NavBar({ activeTab, onTabChange }) {
                 }
               >
                 {tab.label}
+                {tab.id === "tracker" && trackedCount > 0 && (
+                  <span
+                    className={
+                      "ml-2 rounded-full px-1.5 py-0.5 text-label tabular-nums " +
+                      (isActive ? "bg-white/25 text-white" : "bg-gray-200 text-gray-600")
+                    }
+                  >
+                    {trackedCount}
+                  </span>
+                )}
               </button>
             );
           })}
