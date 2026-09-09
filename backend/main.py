@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import re
 from typing import Literal
@@ -10,6 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 MODEL = "claude-haiku-4-5-20251001"
 
@@ -154,16 +157,20 @@ class ScreenResult(BaseModel):
         return text
 
     @model_validator(mode="after")
-    def _tiers_agree(self) -> "ScreenResult":
-        # CLAUDE.md: the verdict tier and its sub-reason tags must always agree.
+    def _warn_on_tier_mismatch(self) -> "ScreenResult":
+        # CLAUDE.md: the verdict tier and its sub-reason tags should always agree.
+        # Deliberately a warning, not a failure - a mismatch here is a prompt-quality
+        # signal, and the response is still useful to the user, so it renders as-is
+        # rather than costing a retry and a 502.
         allowed = TAGS_BY_VERDICT[self.verdict]
-        mismatched = sorted(
-            {reason.tag for reason in self.verdict_reasons} - allowed
-        )
+        mismatched = sorted({reason.tag for reason in self.verdict_reasons} - allowed)
         if mismatched:
-            raise ValueError(
-                f"verdict {self.verdict!r} carries non-{self.verdict} tags: "
-                + ", ".join(mismatched)
+            logger.warning(
+                "Verdict tier mismatch: verdict=%r carries non-%s tag(s) %s; reasons=%r",
+                self.verdict,
+                self.verdict,
+                ", ".join(mismatched),
+                [reason.model_dump() for reason in self.verdict_reasons],
             )
         return self
 

@@ -201,10 +201,15 @@ or the date is too vague to resolve to a single day, it returns `null`.
 ### Output Validation
 
 The model's response is validated against the `ScreenResult` model in `backend/main.py` before it is
-returned to the client. Validation rejects an unknown sub-reason tag, an empty `verdict_reasons`
-list, a verdict whose tier disagrees with its tags, and a deadline that is neither `null` nor
+returned to the client. Validation rejects an invalid verdict, an unknown sub-reason tag, an empty
+`verdict_reasons` list, a wrongly typed field, and a deadline that is neither `null` nor
 `YYYY-MM-DD`. An empty-string deadline is normalized to `null` rather than rejected. A validation
 failure follows the same path as unparseable JSON: retry the call once, then return a 502.
+
+The tier cross-check is deliberately softer. If the sub-reason tags do not match the tier of the
+top-level verdict, the backend logs a warning naming the verdict, the mismatched tags, and the full
+reasons list, then returns the response unchanged. A mismatch means the prompt needs work, not that
+the analysis is worthless, so the user still sees their verdict instead of an error.
 
 ---
 
