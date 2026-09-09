@@ -8,11 +8,16 @@ import { useEffect, useRef } from "react";
 
 const LABEL = "block mb-1 px-2 text-label font-medium uppercase tracking-wide text-gray-400";
 
-const CONTROL =
-  "w-full rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-body " +
-  "text-gray-900 transition-colors placeholder:text-gray-400 hover:border-gray-200 " +
+// Size and color are kept out of the base so callers that need a different
+// type tier (the card modal heading) can supply their own without two
+// competing font-size utilities on one element.
+const CONTROL_BASE =
+  "w-full rounded-lg border border-transparent bg-transparent px-2 py-1.5 " +
+  "transition-colors placeholder:text-gray-400 hover:border-gray-200 " +
   "hover:bg-gray-50 focus:border-accent focus:bg-white focus:outline-none " +
   "focus:ring-2 focus:ring-accent/20";
+
+const CONTROL = CONTROL_BASE + " text-body text-gray-900";
 
 function AutoTextarea({ value, onChange, ...rest }) {
   const ref = useRef(null);
@@ -33,6 +38,23 @@ function AutoTextarea({ value, onChange, ...rest }) {
       onChange={(event) => onChange(event.target.value)}
       className={CONTROL + " resize-none overflow-hidden leading-relaxed"}
       {...rest}
+    />
+  );
+}
+
+/**
+ * Inline-editable field with no visible label, for headings where the value is
+ * its own label. `className` carries the type tier and color.
+ */
+export function PlainField({ value, onChange, placeholder, label, className = "" }) {
+  return (
+    <input
+      type="text"
+      value={value ?? ""}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      aria-label={label}
+      className={CONTROL_BASE + " " + className}
     />
   );
 }
@@ -138,24 +160,37 @@ export function ListField({ label, items, onChange, placeholder }) {
   );
 }
 
-/** The full editable job report. `showNotes` adds the tracker-only notes field. */
-export default function JobDetailFields({ value, onChange, showNotes = false }) {
+/**
+ * The full editable job report. `showNotes` adds the tracker-only notes field.
+ * `showIdentity` can be turned off where title and company are already edited
+ * elsewhere on screen, as in the card modal heading.
+ */
+export default function JobDetailFields({
+  value,
+  onChange,
+  showNotes = false,
+  showIdentity = true,
+}) {
   const set = (key) => (next) => onChange({ ...value, [key]: next });
 
   return (
     <div className="flex flex-col gap-4">
-      <TextField
-        label="Position title"
-        value={value.position_title}
-        onChange={set("position_title")}
-        placeholder="Untitled role"
-      />
-      <TextField
-        label="Company name"
-        value={value.company_name}
-        onChange={set("company_name")}
-        placeholder="Unknown company"
-      />
+      {showIdentity && (
+        <>
+          <TextField
+            label="Position title"
+            value={value.position_title}
+            onChange={set("position_title")}
+            placeholder="Untitled role"
+          />
+          <TextField
+            label="Company name"
+            value={value.company_name}
+            onChange={set("company_name")}
+            placeholder="Unknown company"
+          />
+        </>
+      )}
       <DateField
         label="Application deadline"
         value={value.deadline}

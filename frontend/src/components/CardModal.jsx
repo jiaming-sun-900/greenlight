@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import JobDetailFields from "./JobFields.jsx";
+import JobDetailFields, { PlainField } from "./JobFields.jsx";
 import VerdictBadge from "./VerdictBadge.jsx";
 import VerdictModal from "./VerdictModal.jsx";
 import { COLUMNS } from "../hooks/useCards.js";
@@ -33,26 +33,47 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Job details"
+        aria-label={card.position_title || "Job details"}
         className="flex max-h-full w-full max-w-lg flex-col rounded-2xl bg-white shadow-xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-gray-100 px-5 py-4">
-          <div>
-            <VerdictBadge verdict={card.verdict} />
-            <button
-              type="button"
-              onClick={() => setShowReasons(true)}
-              className="mt-2 block text-body font-medium text-gray-500 underline-offset-2 hover:text-gray-900 hover:underline"
-            >
-              Why this verdict?
-            </button>
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
+          {/* Title and company are the modal's heading, so they are edited here
+              rather than in the field list below. The negative margin pulls the
+              inputs' own padding back so they align with the badge underneath. */}
+          <div className="min-w-0 flex-1">
+            <div className="-mx-2">
+              <PlainField
+                label="Position title"
+                value={card.position_title}
+                onChange={(next) => onChange({ ...card, position_title: next })}
+                placeholder="Untitled role"
+                className="text-title font-semibold text-gray-900"
+              />
+              <PlainField
+                label="Company name"
+                value={card.company_name}
+                onChange={(next) => onChange({ ...card, company_name: next })}
+                placeholder="Unknown company"
+                className="text-label text-gray-500"
+              />
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <VerdictBadge verdict={card.verdict} />
+              <button
+                type="button"
+                onClick={() => setShowReasons(true)}
+                className="text-body font-medium text-gray-500 underline-offset-2 hover:text-gray-900 hover:underline"
+              >
+                Why this verdict?
+              </button>
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+            className="shrink-0 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
               <path
@@ -83,7 +104,12 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
             </select>
           </div>
 
-          <JobDetailFields value={card} onChange={onChange} showNotes />
+          <JobDetailFields
+            value={card}
+            onChange={onChange}
+            showNotes
+            showIdentity={false}
+          />
         </div>
 
         <div className="shrink-0 border-t border-gray-100 px-5 py-4">
