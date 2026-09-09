@@ -1,11 +1,13 @@
 import json
 import os
+import re
+from typing import Literal
 
 import anthropic
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 load_dotenv()
 
@@ -90,6 +92,82 @@ is not present in the posting, use an empty string (or null for deadline, or [] 
 only the JSON object."""
 
 
+# Sub-reason tags, grouped by the verdict tier they belong to. Kept in lockstep with
+# SYSTEM_PROMPT above and with the tag list in SPEC.md.
+TAGS_BY_VERDICT: dict[str, frozenset[str]] = {
+    "green": frozenset(
+        {"explicit_optcpt", "explicit_h1b_sponsor", "optcpt_overrides_generic"}
+    ),
+    "yellow": frozenset(
+        {
+            "generic_authorization_only",
+            "silent_no_signal",
+            "vague_conditional",
+            "contradictory",
+        }
+    ),
+    "red": frozenset(
+        {"citizens_only", "no_sponsorship_now_or_future", "explicit_no_visa"}
+    ),
+}
+
+ALL_TAGS = frozenset().union(*TAGS_BY_VERDICT.values())
+
+ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+class VerdictReason(BaseModel):
+    tag: str
+    detected_phrase: str | None = None
+
+    @field_validator("tag")
+    @classmethod
+    def _known_tag(cls, value: str) -> str:
+        if value not in ALL_TAGS:
+            raise ValueError(f"unknown sub-reason tag: {value!r}")
+        return value
+
+
+class ScreenResult(BaseModel):
+    """The shape the model is asked to return. Validated before anything reaches the client."""
+
+    verdict: Literal["green", "yellow", "red"]
+    verdict_reasons: list[VerdictReason] = Field(min_length=1)
+    position_title: str = ""
+    company_name: str = ""
+    job_functions: str = ""
+    preferred_skills: list[str] = Field(default_factory=list)
+    deadline: str | None = None
+
+    @field_validator("deadline", mode="before")
+    @classmethod
+    def _iso_or_none(cls, value: object) -> str | None:
+        # The model occasionally emits "" instead of null; treat that as "no deadline"
+        # rather than failing the whole response over it.
+        if value is None:
+            return None
+        text = str(value).strip()
+        if not text:
+            return None
+        if not ISO_DATE.match(text):
+            raise ValueError(f"deadline must be YYYY-MM-DD or null, got {text!r}")
+        return text
+
+    @model_validator(mode="after")
+    def _tiers_agree(self) -> "ScreenResult":
+        # CLAUDE.md: the verdict tier and its sub-reason tags must always agree.
+        allowed = TAGS_BY_VERDICT[self.verdict]
+        mismatched = sorted(
+            {reason.tag for reason in self.verdict_reasons} - allowed
+        )
+        if mismatched:
+            raise ValueError(
+                f"verdict {self.verdict!r} carries non-{self.verdict} tags: "
+                + ", ".join(mismatched)
+            )
+        return self
+
+
 def _call_model(job_description: str) -> str:
     """Call Claude and return the raw text of the first content block."""
     message = client.messages.create(
@@ -123,7 +201,8 @@ def screen(request: ScreenRequest):
     if not request.job_description.strip():
         raise HTTPException(status_code=400, detail="job_description must not be empty.")
 
-    # Ask the model, then parse. If the output isn't valid JSON, retry once before giving up.
+    # Ask the model, then parse and validate. If the output isn't valid JSON, or doesn't
+    # match ScreenResult, retry once before giving up.
     last_error: Exception | None = None
     for _ in range(2):
         try:
@@ -134,12 +213,13 @@ def screen(request: ScreenRequest):
             ) from exc
 
         try:
-            return json.loads(_strip_code_fences(raw))
-        except json.JSONDecodeError as exc:
+            payload = json.loads(_strip_code_fences(raw))
+            return ScreenResult.model_validate(payload).model_dump()
+        except (json.JSONDecodeError, ValidationError) as exc:
             last_error = exc
             continue
 
     raise HTTPException(
         status_code=502,
-        detail=f"Model did not return valid JSON after a retry: {last_error}",
+        detail=f"Model did not return a valid screening result after a retry: {last_error}",
     )
