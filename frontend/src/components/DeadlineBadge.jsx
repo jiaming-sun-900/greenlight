@@ -24,7 +24,7 @@ export default function DeadlineBadge({ deadline }) {
   if (days === null) return null;
 
   if (days < 0) {
-    return <Chip className="bg-gray-100 text-gray-500">Closed</Chip>;
+    return <Chip className="bg-gray-100 text-muted">Closed</Chip>;
   }
   if (days === 0) {
     return <Chip className="bg-orange-100 text-orange-800">Due today</Chip>;
@@ -37,6 +37,6 @@ export default function DeadlineBadge({ deadline }) {
     );
   }
   return (
-    <Chip className="bg-gray-50 text-gray-500">{formatDeadline(deadline)}</Chip>
+    <Chip className="bg-gray-50 text-muted">{formatDeadline(deadline)}</Chip>
   );
 }

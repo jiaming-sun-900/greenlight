@@ -40,7 +40,7 @@ export default function ViewToggle({ activeTab, onTabChange, trackedCount = 0 })
             className={
               "relative z-10 flex w-24 items-center justify-center gap-2 rounded-full px-3 py-1.5 " +
               "text-body font-medium transition-colors duration-200 sm:w-28 sm:px-4 " +
-              (isActive ? "text-white" : "text-gray-600 hover:text-text")
+              (isActive ? "text-white" : "text-ink hover:text-ink")
             }
           >
             {tab.label}
@@ -48,7 +48,7 @@ export default function ViewToggle({ activeTab, onTabChange, trackedCount = 0 })
               <span
                 className={
                   "rounded-full px-1.5 py-0.5 text-micro tabular-nums transition-colors " +
-                  (isActive ? "bg-white/25 text-white" : "bg-gray-200 text-gray-600")
+                  (isActive ? "bg-white/25 text-white" : "bg-gray-200 text-ink")
                 }
               >
                 {trackedCount}

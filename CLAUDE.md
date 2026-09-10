@@ -25,8 +25,20 @@ Notes on the scale:
 
 - `text-display` is a `clamp()`, not a fixed size: 28px on narrow viewports, ramping to 36px by roughly 1000px wide. That keeps the top of the scale loud on a desktop without swamping a 375px phone. It is reserved for the `h1` of a view; nothing else should use it.
 - There is no separate tier for panel headers. Panel headers, card titles, column headings, and modal titles are all the same rank and all use `text-title`, because that is how they actually read.
-- Weight and tracking are part of the tier, not a per-instance choice. Use the pairing in the table. Color stays free (`text-gray-*`) since it encodes emphasis, not rank.
+- Weight and tracking are part of the tier, not a per-instance choice. Use the pairing in the table. Color is a separate axis from size: see "Text color" below.
 - Icon and glyph sizes are not type. Decorative glyphs use the `icon-lg` utility (backed by `--icon-lg` in `@theme`), never a `text-*` token borrowed as a font-size hack.
+
+## Text color
+
+Three text colors, and no ad hoc `text-gray-*` shades. Size encodes rank, color encodes how closely the reader is meant to parse the text, and the two are chosen independently.
+
+| Token        | Value     | Use for |
+|--------------|-----------|---------|
+| `text-text`  | `#111111` | The `h1` of a view and the brand wordmark. Nothing else |
+| `text-ink`   | `#1f2937` | Body copy and anything read word by word: field values, panel headers, column headings, card titles, list items, prose |
+| `text-muted` | `#4b5563` | Passive metadata, scanned rather than read: field labels, char counts, column counts and hints, deadlines, placeholder text, empty-state copy, fine print |
+
+`ink` and `muted` are defined in the `@theme` block of `frontend/src/index.css`. Both are deliberately darker than a typical gray ramp's 500/400: at these sizes the lighter shades read as disabled rather than secondary. Neither is pure black. An icon-only button that is `text-muted` at rest goes to `text-ink` on hover rather than to a third shade.
 
 ## Layout and responsiveness
 

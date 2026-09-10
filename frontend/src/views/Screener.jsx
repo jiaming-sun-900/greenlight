@@ -111,7 +111,7 @@ export default function Screener({ nav, onAddToTracker }) {
             <h1 className="text-display font-semibold tracking-tight text-text">
               Screen a job posting
             </h1>
-            <p className="mt-1 text-body text-gray-500">
+            <p className="mt-1 text-body text-muted">
               Paste a job description to check visa eligibility for
               international students.
             </p>
@@ -127,10 +127,10 @@ export default function Screener({ nav, onAddToTracker }) {
           className="flex min-h-0 flex-col rounded-2xl border-2 border-gray-200 bg-white shadow-sm"
         >
           <div className="flex shrink-0 items-center justify-between border-b-2 border-gray-100 px-5 py-3">
-            <h2 className="text-title font-semibold text-gray-800">
+            <h2 className="text-title font-semibold text-ink">
               Job description
             </h2>
-            <span className="text-micro tabular-nums text-gray-400">
+            <span className="text-micro tabular-nums text-muted">
               {jobDescription.length.toLocaleString()} chars
             </span>
           </div>
@@ -141,7 +141,7 @@ export default function Screener({ nav, onAddToTracker }) {
               placeholder="Paste a full job description here..."
               className={
                 "min-h-[300px] w-full resize-none overflow-y-auto bg-transparent pl-5 py-4 " +
-                "text-body leading-relaxed text-gray-800 placeholder:text-gray-400 " +
+                "text-body leading-relaxed text-ink placeholder:text-muted " +
                 "focus:outline-none md:min-h-0 " +
                 MEASURE_PADDING
               }
@@ -155,8 +155,8 @@ export default function Screener({ nav, onAddToTracker }) {
           className="flex min-h-0 flex-col rounded-2xl border-2 border-gray-200 bg-white shadow-sm"
         >
           <div className="flex shrink-0 items-center justify-between border-b-2 border-gray-100 px-5 py-3">
-            <h2 className="text-title font-semibold text-gray-800">Analysis</h2>
-            <span className="text-micro text-gray-400">
+            <h2 className="text-title font-semibold text-ink">Analysis</h2>
+            <span className="text-micro text-muted">
               {loading ? "Analyzing…" : draft ? "Editable" : "Preview"}
             </span>
           </div>
@@ -203,7 +203,7 @@ function ResultView({ draft, onChange, onAdd }) {
             <button
               type="button"
               onClick={() => setShowReasons(true)}
-              className="text-body font-medium text-gray-500 underline-offset-2 hover:text-gray-900 hover:underline"
+              className="text-body font-medium text-muted underline-offset-2 hover:text-ink hover:underline"
             >
               Why this verdict?
             </button>
@@ -241,7 +241,7 @@ function ResultView({ draft, onChange, onAdd }) {
 function EmptyState() {
   return (
     <div className="flex flex-1 items-center justify-center px-5 py-16 text-center">
-      <p className="max-w-xs text-label text-gray-400">
+      <p className="max-w-xs text-label text-muted">
         Paste a job description and press Analyze.
       </p>
     </div>
@@ -277,10 +277,10 @@ function ErrorState({ message }) {
       <div className="rounded-full bg-[#fee2e2] px-3.5 py-1.5 text-body font-semibold text-red-900">
         Analysis failed
       </div>
-      <p className="max-w-sm text-body leading-relaxed text-gray-500">
+      <p className="max-w-sm text-body leading-relaxed text-muted">
         {message}
       </p>
-      <p className="text-label text-gray-400">
+      <p className="text-label text-muted">
         Check that the backend is running, then press Analyze again.
       </p>
     </div>

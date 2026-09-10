@@ -6,18 +6,18 @@ import { useEffect, useRef } from "react";
 // Inputs are borderless until hovered or focused. That keeps the panel reading
 // as a document while still signalling that every value can be corrected.
 
-const LABEL = "block mb-1 px-2 text-label font-medium uppercase tracking-wide text-gray-400";
+const LABEL = "block mb-1 px-2 text-label font-medium uppercase tracking-wide text-muted";
 
 // Size and color are kept out of the base so callers that need a different
 // type tier (the card modal heading) can supply their own without two
 // competing font-size utilities on one element.
 const CONTROL_BASE =
   "w-full rounded-lg border border-transparent bg-transparent px-2 py-1.5 " +
-  "transition-colors placeholder:text-gray-400 hover:border-gray-200 " +
+  "transition-colors placeholder:text-muted hover:border-gray-200 " +
   "hover:bg-gray-50 focus:border-accent focus:bg-white focus:outline-none " +
   "focus:ring-2 focus:ring-accent/20";
 
-const CONTROL = CONTROL_BASE + " text-body text-gray-900";
+const CONTROL = CONTROL_BASE + " text-body text-ink";
 
 function AutoTextarea({ value, onChange, ...rest }) {
   const ref = useRef(null);
@@ -135,7 +135,7 @@ export function ListField({ label, items, onChange, placeholder }) {
               type="button"
               onClick={() => onChange(list.filter((_, idx) => idx !== index))}
               aria-label={`Remove ${item || "skill"}`}
-              className="shrink-0 rounded-md p-1.5 text-gray-300 opacity-0 transition-opacity hover:bg-gray-100 hover:text-gray-600 focus:opacity-100 focus-visible:outline-none group-hover:opacity-100"
+              className="shrink-0 rounded-md p-1.5 text-muted opacity-0 transition-opacity hover:bg-gray-100 hover:text-ink focus:opacity-100 focus-visible:outline-none group-hover:opacity-100"
             >
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
                 <path
@@ -152,7 +152,7 @@ export function ListField({ label, items, onChange, placeholder }) {
       <button
         type="button"
         onClick={() => onChange([...list, ""])}
-        className="mt-1 rounded-md px-2 py-1 text-label font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
+        className="mt-1 rounded-md px-2 py-1 text-label font-medium text-muted transition-colors hover:bg-gray-100 hover:text-ink"
       >
         + Add skill
       </button>

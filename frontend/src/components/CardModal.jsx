@@ -48,14 +48,14 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
                 value={card.position_title}
                 onChange={(next) => onChange({ ...card, position_title: next })}
                 placeholder="Untitled role"
-                className="text-title font-semibold text-gray-900"
+                className="text-title font-semibold text-ink"
               />
               <PlainField
                 label="Company name"
                 value={card.company_name}
                 onChange={(next) => onChange({ ...card, company_name: next })}
                 placeholder="Unknown company"
-                className="text-label text-gray-500"
+                className="text-label text-muted"
               />
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -63,7 +63,7 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
               <button
                 type="button"
                 onClick={() => setShowReasons(true)}
-                className="text-body font-medium text-gray-500 underline-offset-2 hover:text-gray-900 hover:underline"
+                className="text-body font-medium text-muted underline-offset-2 hover:text-ink hover:underline"
               >
                 Why this verdict?
               </button>
@@ -73,7 +73,7 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="shrink-0 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+            className="shrink-0 rounded-md p-1 text-muted transition-colors hover:bg-gray-100 hover:text-ink"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
               <path
@@ -88,13 +88,13 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           <div className="mb-4">
-            <label className="block px-2 text-label font-medium uppercase tracking-wide text-gray-400">
+            <label className="block px-2 text-label font-medium uppercase tracking-wide text-muted">
               Stage
             </label>
             <select
               value={card.column}
               onChange={(event) => onMove(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-body text-gray-900 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+              className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-body text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             >
               {COLUMNS.map((column) => (
                 <option key={column.id} value={column.id}>
@@ -115,13 +115,13 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
         <div className="shrink-0 border-t-2 border-gray-100 px-5 py-4">
           {confirmingDelete ? (
             <div className="flex items-center gap-2">
-              <p className="flex-1 text-label text-gray-600">
+              <p className="flex-1 text-label text-ink">
                 Delete this card permanently?
               </p>
               <button
                 type="button"
                 onClick={() => setConfirmingDelete(false)}
-                className="rounded-lg px-3 py-2 text-body font-medium text-gray-600 transition-colors hover:bg-gray-100"
+                className="rounded-lg px-3 py-2 text-body font-medium text-ink transition-colors hover:bg-gray-100"
               >
                 Cancel
               </button>

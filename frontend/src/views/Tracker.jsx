@@ -22,14 +22,14 @@ function Column({ column, cards, onOpenCard, highlightId }) {
     >
       <header className="shrink-0 border-b-2 border-gray-100 px-4 py-3">
         <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-title font-semibold text-gray-800">
+          <h2 className="text-title font-semibold text-ink">
             {column.label}
           </h2>
-          <span className="text-micro tabular-nums text-gray-400">
+          <span className="text-micro tabular-nums text-muted">
             {cards.length}
           </span>
         </div>
-        <p className="mt-0.5 text-label text-gray-400">{column.hint}</p>
+        <p className="mt-0.5 text-label text-muted">{column.hint}</p>
       </header>
 
       <div
@@ -40,7 +40,7 @@ function Column({ column, cards, onOpenCard, highlightId }) {
         }
       >
         {cards.length === 0 ? (
-          <p className="px-2 py-8 text-center text-label text-gray-300">
+          <p className="px-2 py-8 text-center text-label text-muted">
             {isOver ? "Drop here" : "Nothing here yet"}
           </p>
         ) : (
@@ -64,10 +64,10 @@ function EmptyBoard({ onNavigateToScreener }) {
       <span aria-hidden className="icon-lg">
         🗂️
       </span>
-      <h2 className="text-title font-semibold text-gray-800">
+      <h2 className="text-title font-semibold text-ink">
         No applications tracked yet
       </h2>
-      <p className="max-w-sm text-body text-gray-500">
+      <p className="max-w-sm text-body text-muted">
         Screen a job posting, review the analysis, then add it to your tracker to
         start following it through to an offer.
       </p>
@@ -139,7 +139,7 @@ export default function Tracker({
             <h1 className="text-display font-semibold tracking-tight text-text">
               Application Tracker
             </h1>
-            <p className="mt-1 text-body text-gray-500">
+            <p className="mt-1 text-body text-muted">
               {cards.length === 0
                 ? "Screened jobs you save will show up here."
                 : `${cards.length} tracked ${

@@ -36,10 +36,10 @@ export function CardFace({ card, className = "", ...rest }) {
       }
       {...rest}
     >
-      <h3 className="text-body font-semibold leading-snug text-gray-900">
+      <h3 className="text-body font-semibold leading-snug text-ink">
         {title}
       </h3>
-      <p className="mt-0.5 text-label text-gray-500">{company}</p>
+      <p className="mt-0.5 text-label text-muted">{company}</p>
       <div className="mt-2 flex items-center gap-2">
         <span
           aria-hidden

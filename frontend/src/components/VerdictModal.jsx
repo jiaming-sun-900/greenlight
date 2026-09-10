@@ -51,7 +51,7 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+            className="rounded-md p-1 text-muted transition-colors hover:bg-gray-100 hover:text-ink"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
               <path
@@ -70,7 +70,7 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
           </div>
 
           {list.length === 0 ? (
-            <p className="text-body text-gray-500">
+            <p className="text-body text-muted">
               No specific signals were recorded for this verdict.
             </p>
           ) : (
@@ -80,18 +80,18 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
                   key={idx}
                   className="rounded-lg border border-gray-100 bg-gray-50 px-3.5 py-3"
                 >
-                  <div className="text-body font-medium text-gray-800">
+                  <div className="text-body font-medium text-ink">
                     {labelForTag(reason.tag)}
                   </div>
                   {reason.detected_phrase ? (
-                    <div className="mt-1 text-body text-gray-600">
+                    <div className="mt-1 text-body text-ink">
                       Detected:{" "}
-                      <span className="italic text-gray-800">
+                      <span className="italic text-ink">
                         “{reason.detected_phrase}”
                       </span>
                     </div>
                   ) : (
-                    <div className="mt-1 text-body text-gray-500">
+                    <div className="mt-1 text-body text-muted">
                       No visa, sponsorship, or work-authorization language found.
                     </div>
                   )}

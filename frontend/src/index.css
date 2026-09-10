@@ -10,6 +10,11 @@
   --color-accent-hover: #047857;
   --color-accent-dot: #10b981;
   --color-accent-soft: #d1fae5;
+  /* Two text grays, no more (see CLAUDE.md > Text color). `ink` is body copy
+     and anything a reader parses word by word; `muted` is passive metadata.
+     Headings keep `--color-text`. Nothing here is pure black. */
+  --color-ink: #1f2937;
+  --color-muted: #4b5563;
   --font-sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
   /* Font size hierarchy (see CLAUDE.md > Typography scale).
