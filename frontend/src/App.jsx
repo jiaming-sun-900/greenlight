@@ -1,5 +1,4 @@
 import { useCallback, useState } from "react";
-import NavBar from "./components/NavBar.jsx";
 import Screener from "./views/Screener.jsx";
 import Tracker from "./views/Tracker.jsx";
 import useCards from "./hooks/useCards.js";
@@ -20,21 +19,26 @@ export default function App() {
 
   const clearHighlight = useCallback(() => setHighlightId(null), []);
 
+  // There is no app header: each view owns its own title row, and the view
+  // toggle rides along in it.
+  const nav = {
+    activeTab,
+    onTabChange: setActiveTab,
+    trackedCount: cards.length,
+  };
+
   return (
     // Pinned to the viewport from `md` up so the two screener panels scroll
     // internally instead of pushing the Analyze button below the fold. Below
-    // `md` the panels stack and the page scrolls as one.
+    // `md` the panels stack and the page scrolls as one, which is why the
+    // title row inside each view is sticky.
     <div className="flex min-h-dvh flex-col bg-bg text-text md:h-dvh md:overflow-hidden">
-      <NavBar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        trackedCount={cards.length}
-      />
       <main className="flex flex-1 flex-col md:min-h-0">
         {activeTab === "screener" ? (
-          <Screener onAddToTracker={handleAddToTracker} />
+          <Screener nav={nav} onAddToTracker={handleAddToTracker} />
         ) : (
           <Tracker
+            nav={nav}
             cards={cards}
             onUpdateCard={updateCard}
             onDeleteCard={deleteCard}

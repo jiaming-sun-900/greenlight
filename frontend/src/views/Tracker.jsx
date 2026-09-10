@@ -9,6 +9,7 @@ import {
 } from "@dnd-kit/core";
 import CardModal from "../components/CardModal.jsx";
 import JobCard, { CardFace } from "../components/JobCard.jsx";
+import ViewToggle from "../components/ViewToggle.jsx";
 import { COLUMNS, COLUMN_IDS } from "../hooks/useCards.js";
 
 function Column({ column, cards, onOpenCard, highlightId }) {
@@ -35,7 +36,7 @@ function Column({ column, cards, onOpenCard, highlightId }) {
         ref={setNodeRef}
         className={
           "min-h-0 flex-1 space-y-3 overflow-y-auto p-3 transition-colors " +
-          (isOver ? "bg-emerald-50" : "")
+          (isOver ? "bg-accent-soft/50" : "")
         }
       >
         {cards.length === 0 ? (
@@ -82,6 +83,7 @@ function EmptyBoard({ onNavigateToScreener }) {
 }
 
 export default function Tracker({
+  nav,
   cards,
   onUpdateCard,
   onDeleteCard,
@@ -127,18 +129,26 @@ export default function Tracker({
   }
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col px-4 py-6 sm:px-6">
-      <header className="mb-5 shrink-0">
-        <h1 className="text-display font-semibold tracking-tight text-text">
-          Application tracker
-        </h1>
-        <p className="mt-1 text-body text-gray-500">
-          {cards.length === 0
-            ? "Screened jobs you save will show up here."
-            : `${cards.length} tracked ${
-                cards.length === 1 ? "application" : "applications"
-              }. Drag a card between stages, or click it to edit.`}
-        </p>
+    <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col px-4 pb-6 sm:px-6">
+      {/* Sticky for the same reason as the screener's: on a narrow viewport
+          the board is taller than the screen and the toggle has to stay
+          reachable. See the note in views/Screener.jsx. */}
+      <header className="sticky top-0 z-20 -mx-4 mb-5 shrink-0 bg-bg/95 px-4 pb-4 pt-6 backdrop-blur sm:-mx-6 sm:px-6">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+          <div className="min-w-0">
+            <h1 className="text-display font-semibold tracking-tight text-text">
+              Application Tracker
+            </h1>
+            <p className="mt-1 text-body text-gray-500">
+              {cards.length === 0
+                ? "Screened jobs you save will show up here."
+                : `${cards.length} tracked ${
+                    cards.length === 1 ? "application" : "applications"
+                  }. Drag a card between stages, or click it to edit.`}
+            </p>
+          </div>
+          <ViewToggle {...nav} />
+        </div>
       </header>
 
       {cards.length === 0 ? (

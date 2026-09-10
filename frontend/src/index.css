@@ -3,8 +3,13 @@
 @theme {
   --color-bg: #fafafa;
   --color-text: #111111;
-  --color-accent: #16a34a;
-  --color-accent-hover: #15803d;
+  /* One green across the app: the Greenlight emerald. Solid fills use
+     `accent` (emerald 600, dark enough for white text), status dots and the
+     brand mark use `accent-dot`, tinted surfaces use `accent-soft`. */
+  --color-accent: #059669;
+  --color-accent-hover: #047857;
+  --color-accent-dot: #10b981;
+  --color-accent-soft: #d1fae5;
   --font-sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
   /* Font size hierarchy (see CLAUDE.md > Typography scale).
@@ -37,8 +42,10 @@
 :root {
   --color-bg: #fafafa;
   --color-text: #111111;
-  --color-accent: #16a34a;
-  --color-accent-hover: #15803d;
+  --color-accent: #059669;
+  --color-accent-hover: #047857;
+  --color-accent-dot: #10b981;
+  --color-accent-soft: #d1fae5;
 }
 
 html,

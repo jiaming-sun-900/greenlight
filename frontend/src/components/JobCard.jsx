@@ -9,7 +9,7 @@ const VERDICT_BORDER = {
 };
 
 const VERDICT_DOT = {
-  green: "bg-emerald-500",
+  green: "bg-accent-dot",
   yellow: "bg-yellow-500",
   red: "bg-red-500",
 };

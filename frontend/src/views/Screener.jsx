@@ -1,5 +1,7 @@
 import { useState } from "react";
+import BrandMark from "../components/BrandMark.jsx";
 import JobDetailFields from "../components/JobFields.jsx";
+import ViewToggle from "../components/ViewToggle.jsx";
 import VerdictBadge from "../components/VerdictBadge.jsx";
 import VerdictModal from "../components/VerdictModal.jsx";
 import { toISODate } from "../lib/dates.js";
@@ -11,6 +13,13 @@ const SCREEN_ENDPOINT = "http://localhost:8000/screen";
 // of each panel, never to the panel or its header row. Left aligned rather than
 // centered, so content stays flush with the panel header above it.
 const MEASURE = "w-full max-w-[70ch]";
+
+// A textarea cannot hold its text to a measure narrower than its own box: the
+// scrollbar rides the element's right edge, so capping the element's width
+// parks the scrollbar mid-panel. Instead the textarea spans the full panel and
+// the measure is enforced by padding, which keeps the scrollbar flush with the
+// panel edge where it belongs.
+const MEASURE_PADDING = "pr-[max(1.25rem,calc(100%-70ch-1.25rem))]";
 
 /** Shape the backend response into the editable draft the panel works with. */
 function toDraft(data) {
@@ -31,7 +40,7 @@ function toDraft(data) {
   };
 }
 
-export default function Screener({ onAddToTracker }) {
+export default function Screener({ nav, onAddToTracker }) {
   const [jobDescription, setJobDescription] = useState("");
   const [draft, setDraft] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -90,24 +99,34 @@ export default function Screener({ onAddToTracker }) {
     // each panel scrolls internally so Analyze never gets pushed off the bottom,
     // however long the posting is. The panels themselves are fluid; it is the
     // text inside them that is held to a readable measure (see MEASURE).
-    <div className="mx-auto flex w-full max-w-[1800px] flex-col px-4 py-6 sm:px-6 md:h-full xl:px-10">
-      <header className="mb-5 shrink-0">
-        <h1 className="text-display font-semibold tracking-tight text-text">
-          Screen a job posting
-        </h1>
-        <p className="mt-1 text-body text-gray-500">
-          Paste a job description to check visa eligibility for international
-          students.
-        </p>
+    <div className="mx-auto flex w-full max-w-[1800px] flex-col px-4 pb-6 sm:px-6 md:h-full xl:px-10">
+      {/* Sticky because below `md` the panels stack and the page scrolls as
+          one: the toggle has to stay reachable without scrolling back to the
+          top. From `md` up the view is pinned and only the panels scroll, so
+          nothing ever travels under this row and sticky costs nothing. The
+          negative margins let the blurred backing span the page gutters. */}
+      <header className="sticky top-0 z-20 -mx-4 mb-5 shrink-0 bg-bg/95 px-4 pb-4 pt-6 backdrop-blur sm:-mx-6 sm:px-6 xl:-mx-10 xl:px-10">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+          <div className="min-w-0">
+            <h1 className="text-display font-semibold tracking-tight text-text">
+              Screen a job posting
+            </h1>
+            <p className="mt-1 text-body text-gray-500">
+              Paste a job description to check visa eligibility for
+              international students.
+            </p>
+          </div>
+          <ViewToggle {...nav} />
+        </div>
       </header>
 
       <div className="grid grid-cols-1 gap-5 md:min-h-0 md:flex-1 md:grid-cols-2">
         {/* Left panel - input */}
         <section
           aria-label="Job description input"
-          className="flex min-h-0 flex-col rounded-2xl border border-gray-200 bg-white shadow-sm"
+          className="flex min-h-0 flex-col rounded-2xl border-2 border-gray-200 bg-white shadow-sm"
         >
-          <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-3">
+          <div className="flex shrink-0 items-center justify-between border-b-2 border-gray-100 px-5 py-3">
             <h2 className="text-title font-semibold text-gray-800">
               Job description
             </h2>
@@ -121,10 +140,10 @@ export default function Screener({ onAddToTracker }) {
               onChange={(e) => setJobDescription(e.target.value)}
               placeholder="Paste a full job description here..."
               className={
-                "min-h-[300px] w-full resize-none overflow-y-auto bg-transparent px-5 py-4 " +
+                "min-h-[300px] w-full resize-none overflow-y-auto bg-transparent pl-5 py-4 " +
                 "text-body leading-relaxed text-gray-800 placeholder:text-gray-400 " +
                 "focus:outline-none md:min-h-0 " +
-                MEASURE
+                MEASURE_PADDING
               }
             />
           </div>
@@ -133,9 +152,9 @@ export default function Screener({ onAddToTracker }) {
         {/* Right panel - structured output */}
         <section
           aria-label="Analysis result"
-          className="flex min-h-0 flex-col rounded-2xl border border-gray-200 bg-white shadow-sm"
+          className="flex min-h-0 flex-col rounded-2xl border-2 border-gray-200 bg-white shadow-sm"
         >
-          <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-3">
+          <div className="flex shrink-0 items-center justify-between border-b-2 border-gray-100 px-5 py-3">
             <h2 className="text-title font-semibold text-gray-800">Analysis</h2>
             <span className="text-micro text-gray-400">
               {loading ? "Analyzing…" : draft ? "Editable" : "Preview"}
@@ -154,7 +173,10 @@ export default function Screener({ onAddToTracker }) {
         </section>
       </div>
 
-      <div className="mt-5 flex shrink-0 justify-center">
+      {/* Analyze stays centered on the row; the wordmark is parked at the
+          right edge of the same row. Below `sm` there is not enough width for
+          both, so the mark drops to its own centered line underneath. */}
+      <div className="relative mt-5 flex shrink-0 flex-col items-center gap-4 sm:block sm:text-center">
         <button
           type="button"
           onClick={handleAnalyze}
@@ -163,6 +185,7 @@ export default function Screener({ onAddToTracker }) {
         >
           {loading ? "Analyzing…" : "Analyze"}
         </button>
+        <BrandMark className="sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2" />
       </div>
     </div>
   );
@@ -190,7 +213,7 @@ function ResultView({ draft, onChange, onAdd }) {
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-gray-100 px-5 py-4">
+      <div className="shrink-0 border-t-2 border-gray-100 px-5 py-4">
         <button
           type="button"
           onClick={onAdd}
@@ -217,11 +240,9 @@ function ResultView({ draft, onChange, onAdd }) {
 
 function EmptyState() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-2 px-5 py-16 text-center">
-      <p className="text-body text-gray-500">No analysis yet</p>
+    <div className="flex flex-1 items-center justify-center px-5 py-16 text-center">
       <p className="max-w-xs text-label text-gray-400">
-        Paste a job description on the left and press Analyze to see the visa
-        eligibility verdict here.
+        Paste a job description and press Analyze.
       </p>
     </div>
   );

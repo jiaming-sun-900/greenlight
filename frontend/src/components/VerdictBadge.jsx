@@ -1,8 +1,8 @@
 const VERDICT_STYLES = {
   green: {
     label: "Greenlight",
-    dot: "bg-emerald-500",
-    bg: "bg-[#d1fae5]",
+    dot: "bg-accent-dot",
+    bg: "bg-accent-soft",
     text: "text-emerald-900",
   },
   yellow: {
