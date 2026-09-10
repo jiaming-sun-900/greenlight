@@ -46,7 +46,7 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b-2 border-gray-100 px-5 py-4">
-          <h2 className="text-title font-semibold text-text">Why this verdict?</h2>
+          <h2 className="text-title font-semibold text-ink">Why this verdict?</h2>
           <button
             type="button"
             onClick={onClose}

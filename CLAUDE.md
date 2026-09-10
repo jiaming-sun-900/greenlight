@@ -15,16 +15,17 @@ Use a fixed font size hierarchy across the whole frontend. The scale is defined 
 
 | Token          | Size                  | Pairing                              | Use for |
 |----------------|-----------------------|--------------------------------------|---------|
-| `text-micro`   | 12px                  | `font-medium`, sentence case          | Counts, chips, badge text: nav tracked-count pill, panel char count, panel status ("Editable"), column counts, deadline badge |
-| `text-label`   | 14px                  | `font-medium uppercase tracking-wide` for field labels; plain, no tracking for passive metadata | Field labels ("POSITION TITLE"), column hints, fine print, secondary empty-state copy, card company name |
-| `text-body`    | 16px                  | `font-normal` for prose, `font-medium` for buttons and links | Base body text, form inputs, buttons, nav links, interactive links ("Why this verdict?"), field values, list items, verdict badge, Kanban card title (with `font-semibold`) |
-| `text-title`   | 20px                  | `font-semibold`                       | Panel headers ("Job description", "Analysis"), card titles, column headings, modal titles, section labels; the brand logo adds `tracking-tight` |
-| `text-display` | 28px → 36px (fluid)   | `font-semibold tracking-tight`        | The page title only ("Screen a job posting", "Application tracker"). One per view |
+| `text-micro`   | 12px                  | `font-medium` for chips and badges; plain, plus `tabular-nums`, for counts | Deadline badge, view-toggle tracked count, panel char count, panel status ("Editable"), column counts |
+| `text-label`   | 14px                  | `font-medium uppercase tracking-wide` for field labels; `font-medium` alone for small text buttons; plain for passive metadata | Field labels ("POSITION TITLE"), "+ Add skill", column hints, fine print, the screener's panel empty state, empty column text, card company name |
+| `text-body`    | 16px                  | `font-normal` for prose, `font-medium` for buttons and links, `font-semibold` for a Kanban card title | Base body text, form inputs, buttons, view-toggle labels, interactive links ("Why this verdict?"), field values, list items, verdict badge, Kanban card title, the tracker's empty-board copy |
+| `text-title`   | 20px                  | `font-semibold`                       | Panel headers ("Job description", "Analysis"), column headings, modal titles, the card modal's position-title field, empty-state headings; the brand wordmark adds `tracking-tight` |
+| `text-display` | 28px → 36px (fluid)   | `font-semibold tracking-tight`        | The page title only ("Screen a job posting", "Application Tracker"). One per view |
 
 Notes on the scale:
 
 - `text-display` is a `clamp()`, not a fixed size: 28px on narrow viewports, ramping to 36px by roughly 1000px wide. That keeps the top of the scale loud on a desktop without swamping a 375px phone. It is reserved for the `h1` of a view; nothing else should use it.
-- There is no separate tier for panel headers. Panel headers, card titles, column headings, and modal titles are all the same rank and all use `text-title`, because that is how they actually read.
+- There is no separate tier for panel headers. Panel headers, column headings, modal titles, and empty-state headings are all the same rank and all use `text-title`, because that is how they actually read.
+- A Kanban card title is the exception that proves it: at `text-body font-semibold` it outranks the company name under it without competing with the column heading above it. Weight, not size, does that work.
 - Weight and tracking are part of the tier, not a per-instance choice. Use the pairing in the table. Color is a separate axis from size: see "Text color" below.
 - Icon and glyph sizes are not type. Decorative glyphs use the `icon-lg` utility (backed by `--icon-lg` in `@theme`), never a `text-*` token borrowed as a font-size hack.
 
@@ -37,6 +38,8 @@ Three text colors, and no ad hoc `text-gray-*` shades. Size encodes rank, color 
 | `text-text`  | `#111111` | The `h1` of a view and the brand wordmark. Nothing else |
 | `text-ink`   | `#1f2937` | Body copy and anything read word by word: field values, panel headers, column headings, card titles, list items, prose |
 | `text-muted` | `#4b5563` | Passive metadata, scanned rather than read: field labels, char counts, column counts and hints, deadlines, placeholder text, empty-state copy, fine print |
+
+`text-text` is also the root default set on the app shell in `App.jsx`, so an element that sets no color inherits it. That is a fallback, not a choice: anything carrying real text picks `ink` or `muted` explicitly.
 
 `ink` and `muted` are defined in the `@theme` block of `frontend/src/index.css`. Both are deliberately darker than a typical gray ramp's 500/400: at these sizes the lighter shades read as disabled rather than secondary. Neither is pure black. An icon-only button that is `text-muted` at rest goes to `text-ink` on hover rather than to a third shade.
 
