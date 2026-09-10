@@ -10,6 +10,9 @@
   --color-accent-hover: #047857;
   --color-accent-dot: #10b981;
   --color-accent-soft: #d1fae5;
+  /* Halo color for pressed accent buttons. Lighter than the fill on purpose:
+     it never sits under text, so it is free to be the softer emerald. */
+  --color-accent-glow: #10b981;
   /* Two text grays, no more (see CLAUDE.md > Text color). `ink` is body copy
      and anything a reader parses word by word; `muted` is passive metadata.
      Headings keep `--color-text`. Nothing here is pure black. */
@@ -51,6 +54,7 @@
   --color-accent-hover: #047857;
   --color-accent-dot: #10b981;
   --color-accent-soft: #d1fae5;
+  --color-accent-glow: #10b981;
 }
 
 html,
@@ -65,4 +69,36 @@ body {
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* View toggle. The track is a shallow well and the pill a raised cap: the same
+   gradient + inset language as the buttons, one notch quieter. */
+@utility toggle-track {
+  background-image: linear-gradient(to bottom, #e6e8ec, #f5f6f8);
+  box-shadow:
+    inset 0 1px 2px rgb(17 24 39 / 0.1),
+    inset 0 -1px 0 rgb(255 255 255 / 0.8);
+}
+
+@utility toggle-pill {
+  background-image: linear-gradient(
+    to bottom,
+    var(--color-accent),
+    var(--color-accent-hover)
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.25),
+    0 1px 2px rgb(4 47 46 / 0.35),
+    0 2px 8px -3px var(--color-accent-glow);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+/* Pressed: the cap sinks a touch and its shadow tightens. */
+@utility toggle-pill-pressed {
+  transform: scale(0.96);
+  box-shadow:
+    inset 0 1px 2px rgb(4 47 46 / 0.3),
+    0 1px 2px rgb(4 47 46 / 0.25);
 }

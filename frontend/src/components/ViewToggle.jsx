@@ -14,19 +14,19 @@ export default function ViewToggle({ activeTab, onTabChange, trackedCount = 0 })
   );
 
   return (
-    // Both halves are the same width (grid-cols-2), which is what lets the
-    // pill travel by a plain 100% translate.
+    // Both halves are the same width (grid-cols-2, no gap), which is what
+    // lets the pill travel by a plain 100% translate.
     <nav
       role="tablist"
       aria-label="View"
-      className="group relative grid shrink-0 grid-cols-2 gap-1 rounded-full border border-gray-200 bg-gray-100 p-1 shadow-inner"
+      className="group relative grid shrink-0 grid-cols-2 justify-items-center toggle-track rounded-full border border-gray-200 p-1"
     >
       <span
         aria-hidden
         className="pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
-        style={{ transform: `translateX(calc(${activeIndex} * (100% + 0.25rem)))` }}
+        style={{ transform: `translateX(${activeIndex * 100}%)` }}
       >
-        <span className="block h-full w-full rounded-full bg-accent shadow-sm" />
+        <span className="toggle-pill group-active:toggle-pill-pressed block h-full w-full rounded-full" />
       </span>
       {TABS.map((tab) => {
         const isActive = activeTab === tab.id;
