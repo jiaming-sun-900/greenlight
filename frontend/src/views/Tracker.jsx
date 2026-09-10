@@ -18,9 +18,9 @@ function Column({ column, cards, onOpenCard, highlightId }) {
   return (
     <section
       aria-label={column.label}
-      className="flex w-72 shrink-0 flex-col rounded-2xl border border-gray-200 bg-white/70"
+      className="flex w-72 shrink-0 flex-col rounded-2xl border-2 border-gray-200 bg-white/70"
     >
-      <header className="shrink-0 border-b border-gray-100 px-4 py-3">
+      <header className="shrink-0 border-b-2 border-gray-100 px-4 py-3">
         <div className="flex items-baseline justify-between gap-2">
           <h2 className="text-title font-semibold text-gray-800">
             {column.label}

@@ -45,7 +45,7 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
         className="w-full max-w-md rounded-2xl bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+        <div className="flex items-center justify-between border-b-2 border-gray-100 px-5 py-4">
           <h2 className="text-title font-semibold text-text">Why this verdict?</h2>
           <button
             type="button"
@@ -101,7 +101,7 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
           )}
         </div>
 
-        <div className="border-t border-gray-100 px-5 py-4">
+        <div className="border-t-2 border-gray-100 px-5 py-4">
           <button
             type="button"
             onClick={onClose}

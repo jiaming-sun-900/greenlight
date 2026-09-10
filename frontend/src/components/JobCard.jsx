@@ -15,7 +15,7 @@ const VERDICT_DOT = {
 };
 
 const BASE =
-  "rounded-xl border border-l-4 border-gray-200 bg-white p-3 shadow-sm";
+  "rounded-xl border-2 border-l-4 border-gray-200 bg-white p-3 shadow-sm";
 
 /**
  * Card front face with no drag wiring, so the drag overlay can reuse it without

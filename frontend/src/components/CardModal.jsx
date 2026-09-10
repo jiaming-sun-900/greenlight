@@ -37,7 +37,7 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
         className="flex max-h-full w-full max-w-lg flex-col rounded-2xl bg-white shadow-xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b-2 border-gray-100 px-5 py-4">
           {/* Title and company are the modal's heading, so they are edited here
               rather than in the field list below. The negative margin pulls the
               inputs' own padding back so they align with the badge underneath. */}
@@ -112,7 +112,7 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
           />
         </div>
 
-        <div className="shrink-0 border-t border-gray-100 px-5 py-4">
+        <div className="shrink-0 border-t-2 border-gray-100 px-5 py-4">
           {confirmingDelete ? (
             <div className="flex items-center gap-2">
               <p className="flex-1 text-label text-gray-600">
