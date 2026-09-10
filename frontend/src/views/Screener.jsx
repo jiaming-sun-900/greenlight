@@ -180,7 +180,7 @@ export default function Screener({ nav, onAddToTracker }) {
         <button
           type="button"
           onClick={handleAnalyze}
-          className="rounded-full bg-accent px-8 py-2.5 text-body font-medium text-white shadow-sm transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-gray-300"
+          className="btn-accent rounded-full px-8 py-2.5 text-body font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300"
           disabled={jobDescription.trim().length === 0 || loading}
         >
           {loading ? "Analyzing…" : "Analyze"}
@@ -218,8 +218,7 @@ function ResultView({ draft, onChange, onAdd }) {
           type="button"
           onClick={onAdd}
           className={
-            "block rounded-lg bg-accent px-4 py-2.5 text-body font-medium " +
-            "text-white transition-colors hover:bg-accent-hover " +
+            "btn-accent block rounded-lg px-4 py-2.5 text-body font-medium text-white " +
             MEASURE
           }
         >

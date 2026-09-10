@@ -74,7 +74,7 @@ function EmptyBoard({ onNavigateToScreener }) {
       <button
         type="button"
         onClick={onNavigateToScreener}
-        className="mt-2 rounded-full bg-accent px-6 py-2.5 text-body font-medium text-white shadow-sm transition-colors hover:bg-accent-hover"
+        className="btn-accent mt-2 rounded-full px-6 py-2.5 text-body font-medium text-white"
       >
         Screen a job posting
       </button>

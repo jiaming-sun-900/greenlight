@@ -105,7 +105,7 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="w-full rounded-lg bg-accent px-4 py-2.5 text-body font-medium text-white transition-colors hover:bg-accent-hover"
+            className="w-full btn-accent rounded-lg px-4 py-2.5 text-body font-medium text-white"
           >
             Close
           </button>

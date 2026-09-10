@@ -145,7 +145,7 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 rounded-lg bg-accent px-4 py-2.5 text-body font-medium text-white transition-colors hover:bg-accent-hover"
+                className="flex-1 btn-accent rounded-lg px-4 py-2.5 text-body font-medium text-white"
               >
                 Close
               </button>

@@ -71,6 +71,52 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Accent buttons. A shallow gradient plus a hairline top highlight reads as a
+   physical surface without tipping into full skeuomorphism. Both gradient
+   stops are `accent` or darker, because these carry white labels: the softer
+   emerald is used only for the glow, which sits outside the button and so has
+   no contrast obligation. The glow is faint at rest and blooms on press. */
+@utility btn-accent {
+  background-image: linear-gradient(
+    to bottom,
+    var(--color-accent),
+    var(--color-accent-hover)
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    0 1px 2px rgb(4 47 46 / 0.3),
+    0 2px 10px -4px var(--color-accent-glow);
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.1s ease,
+    filter 0.2s ease;
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.06);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.22),
+      0 2px 4px rgb(4 47 46 / 0.3),
+      0 4px 18px -4px var(--color-accent-glow);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+    filter: brightness(0.97);
+    /* The halo tightens onto the button and intensifies, so a press reads as
+       the surface pushing into the page rather than lifting off it. */
+    box-shadow:
+      inset 0 1px 3px rgb(4 47 46 / 0.35),
+      0 0 0 5px color-mix(in oklab, var(--color-accent-glow) 55%, transparent),
+      0 1px 12px -2px var(--color-accent-glow);
+  }
+
+  &:disabled {
+    background-image: none;
+    box-shadow: none;
+    filter: none;
+  }
+}
+
 /* View toggle. The track is a shallow well and the pill a raised cap: the same
    gradient + inset language as the buttons, one notch quieter. */
 @utility toggle-track {
