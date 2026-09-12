@@ -55,7 +55,9 @@ explicit OPT/CPT mention and no explicit exclusion. Ambiguous - could include or
 authorization anywhere. No signal in either direction.
 - "vague_conditional" - Posting offers sponsorship conditionally, not as a commitment (e.g. \
 "sponsorship available for exceptional candidates," "considered on a case-by-case basis").
-- "contradictory" - Posting contains both inclusive and exclusive signals in different sections.
+- "contradictory" - Posting contains two explicit, directly opposing signals in different sections \
+(e.g. a benefits section promising H-1B sponsorship against a requirement that candidates never need \
+sponsorship). This tag outranks every other tag, including the red ones - see the ordered rules.
 - "optcpt_future_unstated" - Posting explicitly accepts OPT/CPT/F-1 for a full-time or permanent \
 role, but says nothing either way about sponsorship after the OPT window ends. The candidate can be \
 hired, but whether there is an H-1B path is simply unanswered.
@@ -104,13 +106,24 @@ and unspecified all count as "ongoing" - if the posting does not clearly mark th
 fixed-term, it is "ongoing". Words like "Full-time" may appear far from the work-authorization \
 section; read the whole posting before deciding.
 - Apply these in order, and stop at the first one that fits:
-  1. Posting bars the candidate outright, now and in future -> RED ("citizens_only",
+  1. The posting makes two EXPLICIT statements that directly oppose each other, and neither is
+     merely a narrower scope of the other -> YELLOW with "contradictory". Apply this BEFORE any
+     other step, including the red ones. A posting that both promises sponsorship and forbids it
+     has not answered the question, and the candidate needs to ask rather than be told no. The
+     opposing statements do not cancel out into whichever one sounds stricter. The verdict for
+     this step is YELLOW, never RED, however strict one of the two statements sounds. Emit one
+     verdict_reasons entry per opposing phrase, both tagged "contradictory".
+     This step does NOT apply when: a job-board tag, benefits blurb, or boilerplate line is
+     corrected or narrowed by a specific statement in the job body (the specific statement wins,
+     carry on to step 2); or a generic work-authorization phrase sits alongside an explicit
+     OPT/CPT mention (that is "optcpt_overrides_generic", step 5).
+  2. Posting bars the candidate outright, now and in future -> RED ("citizens_only",
      "no_sponsorship_now_or_future", or "explicit_no_visa").
-  2. Posting rules out sponsorship in present-tense or role-scoped terms but does not bar someone
+  3. Posting rules out sponsorship in present-tense or role-scoped terms but does not bar someone
      holding their own work authorization -> RED with "no_future_sponsorship_only".
-  3. Posting explicitly commits to sponsoring H-1B or another work visa -> GREEN with
+  4. Posting explicitly commits to sponsoring H-1B or another work visa -> GREEN with
      "explicit_h1b_sponsor".
-  4. Posting explicitly accepts OPT/CPT/F-1:
+  5. Posting explicitly accepts OPT/CPT/F-1:
      a. role_term is "internship_or_temporary", or the posting also addresses later sponsorship
         positively -> GREEN ("explicit_optcpt", plus "optcpt_overrides_generic" when generic
         work-authorization language appears alongside it).
@@ -119,8 +132,8 @@ section; read the whole posting before deciding.
         present: the OPT/CPT mention still overrides that generic phrase, but overriding it only
         answers the "now" question, and the "future" question stays open. Do NOT reach for
         "optcpt_overrides_generic" here - that tag is for 4a only.
-  5. Otherwise fall through to the remaining YELLOW tags ("generic_authorization_only",
-     "vague_conditional", "contradictory", "silent_no_signal").
+  6. Otherwise fall through to the remaining YELLOW tags ("generic_authorization_only",
+     "vague_conditional", "silent_no_signal").
 - "deadline" must be an ISO calendar date in YYYY-MM-DD form so the UI can render it in a date \
 picker. Convert prose dates ("October 15, 2026" -> "2026-10-15"). If the posting names no \
 application deadline, or the date is too vague to resolve to a single day, use null.
@@ -143,7 +156,10 @@ The JSON object must have exactly this shape:
 
 For each verdict_reasons entry, "tag" MUST be exactly one of the sub-reason strings listed above, \
 and "detected_phrase" MUST be the exact text quoted verbatim from the posting that triggered that \
-tag. For "silent_no_signal", set "detected_phrase" to null (there is no phrase to quote). If a field \
+tag. "detected_phrase" MUST be a single JSON string literal or null - never an expression, never \
+string concatenation with "+", never two quoted phrases joined by a separator. If one tag is \
+supported by two separate phrases, emit two verdict_reasons entries with the same tag, one phrase \
+each. For "silent_no_signal", set "detected_phrase" to null (there is no phrase to quote). If a field \
 is not present in the posting, use an empty string (or null for deadline, or [] for lists). Output \
 only the JSON object."""
 
