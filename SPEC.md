@@ -330,8 +330,9 @@ Accepted for now, tracked here so they do not get rediscovered as surprises:
 - **Backend URL is hardcoded.** `SCREEN_ENDPOINT` in `frontend/src/views/Screener.jsx` points at
   `http://localhost:8000` with no environment variable, so the frontend cannot be aimed at a
   deployed backend without a code change. Blocks deployment.
-- **No test suite.** There are no tests and no CI anywhere in the repo. ESLint is configured
-  (`npm run lint`) but nothing enforces it.
+- **No CI.** `backend/tests/` covers schema validation offline and the screening rules against the
+  live API (`pytest --eval`), but nothing runs either automatically. ESLint is configured
+  (`npm run lint`) and equally unenforced. The frontend has no tests at all.
 - **npm audit vulnerabilities.** `npm audit` reports 9 findings (1 low, 2 moderate, 6 high), all in
   transitive dev-tooling dependencies (babel, browserslist, postcss, and similar). None are in
   runtime dependencies shipped to the browser. All are fixable via `npm audit fix`.

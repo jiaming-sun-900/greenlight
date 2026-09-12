@@ -8,6 +8,7 @@ Visa eligibility screener and job application tracker for international students
 - `backend/` - FastAPI. Two routes: `POST /screen`, which calls the Claude API, and `GET /health`, a liveness check that returns `{"status": "ok"}`. Dev server on port 8000.
 - The backend reads `ANTHROPIC_API_KEY` from `backend/.env` (gitignored, never commit it).
 - CORS on the backend allows `http://localhost:5173` and `http://localhost:5174`.
+- Backend tests live in `backend/tests/`. `pytest` runs the offline ones (schema validation, free). `pytest --eval` additionally runs the screening eval against the live Claude API, which costs money, so it is opt-in. When you change a screening rule, add the posting that motivated it to `backend/tests/postings.py` first.
 
 ## Typography scale
 
