@@ -11,9 +11,23 @@ const TAG_LABELS = {
   silent_no_signal: "No visa-related language in the posting",
   vague_conditional: "Conditional / non-committal sponsorship",
   contradictory: "Contradictory signals in the posting",
+  optcpt_future_unstated: "OPT/CPT accepted, nothing said about after",
   citizens_only: "US citizens / permanent residents only",
   no_sponsorship_now_or_future: "No sponsorship now or in the future",
-  explicit_no_visa: "Cannot accommodate or sponsor visas",
+  explicit_no_visa: "Cannot accommodate visa holders at all",
+  no_future_sponsorship_only: "No sponsorship path after your OPT ends",
+};
+
+// Extra context for the tags where "can I be hired now" and "is there a path
+// after OPT" pull in different directions. Most tags speak for themselves and
+// are deliberately left out.
+const TAG_NOTES = {
+  optcpt_future_unstated:
+    "You can be hired on OPT. The posting does not say whether the employer would sponsor an H-1B once it expires, so ask before you invest in the interview process.",
+  no_future_sponsorship_only:
+    "You can usually still be hired on OPT or STEM OPT. What is missing is the path after that, so treat this as a role with a time limit rather than a closed door.",
+  explicit_no_visa:
+    "This one is a closed door: the posting rules out visa holders outright, not just future sponsorship.",
 };
 
 function labelForTag(tag) {
@@ -94,6 +108,11 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
                     <div className="mt-1 text-body text-muted">
                       No visa, sponsorship, or work-authorization language found.
                     </div>
+                  )}
+                  {TAG_NOTES[reason.tag] && (
+                    <p className="mt-2 text-label text-muted">
+                      {TAG_NOTES[reason.tag]}
+                    </p>
                   )}
                 </li>
               ))}
