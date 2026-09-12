@@ -41,7 +41,9 @@ Each verdict has its own set of sub-reason tags - you must use these exact tag s
 
 GREEN (posting is friendly to F-1 candidates):
 - "explicit_optcpt" - Posting explicitly states OPT, CPT, or F-1 status is accepted (e.g. "open to \
-OPT/CPT candidates," "F-1 students welcome").
+OPT/CPT candidates," "F-1 students welcome"), AND either the role is an internship, co-op, or other \
+temporary position that ends inside the OPT window, OR the posting also speaks positively about \
+sponsorship beyond that window.
 - "explicit_h1b_sponsor" - Posting explicitly states the employer will sponsor H-1B or other work visas.
 - "optcpt_overrides_generic" - Posting contains generic "work authorization required" language AND \
 explicit OPT/CPT/sponsorship language elsewhere. The explicit mention overrides the generic phrase.
@@ -54,21 +56,64 @@ authorization anywhere. No signal in either direction.
 - "vague_conditional" - Posting offers sponsorship conditionally, not as a commitment (e.g. \
 "sponsorship available for exceptional candidates," "considered on a case-by-case basis").
 - "contradictory" - Posting contains both inclusive and exclusive signals in different sections.
+- "optcpt_future_unstated" - Posting explicitly accepts OPT/CPT/F-1 for a full-time or permanent \
+role, but says nothing either way about sponsorship after the OPT window ends. The candidate can be \
+hired, but whether there is an H-1B path is simply unanswered.
 
 RED (posting explicitly excludes international students):
 - "citizens_only" - Posting explicitly requires US citizenship or permanent residency.
 - "no_sponsorship_now_or_future" - Posting explicitly states no sponsorship now or in the future.
-- "explicit_no_visa" - Posting explicitly states it cannot accommodate visa holders or cannot \
-sponsor employment visas.
+- "explicit_no_visa" - Posting explicitly states it cannot accommodate visa holders at all, so the \
+candidate cannot be hired even on existing OPT/CPT work authorization.
+- "no_future_sponsorship_only" - Posting rules out sponsorship in present-tense or role-scoped terms \
+("sponsorship is not available for this position," "no sponsorship is available at this time," "we \
+do not sponsor work visas") WITHOUT barring candidates who already hold their own work \
+authorization. The candidate can usually still be hired on OPT/STEM OPT; what is missing is the \
+path after it expires.
 
 RULES:
 - The top-level verdict must match the tier of the sub-reason tags you choose (green tags -> green, \
 yellow tags -> yellow, red tags -> red). Never mix tags from different tiers.
 - IMPORTANT EDGE CASE: If a posting says both "US work authorization required" AND explicitly names \
-OPT or CPT as accepted, the verdict is GREEN with the "optcpt_overrides_generic" tag - the explicit \
-mention of OPT/CPT overrides the generic work-authorization language.
+OPT or CPT as accepted, the explicit mention of OPT/CPT overrides the generic work-authorization \
+language. For an internship or temporary role, or where later sponsorship is addressed positively, \
+that makes the verdict GREEN with the "optcpt_overrides_generic" tag. For a full-time role with \
+nothing said about the period after OPT, the override still holds but only settles the "now" \
+question, so the verdict is YELLOW with "optcpt_future_unstated".
 - If the posting is completely silent on visa/sponsorship/work-authorization, the verdict is YELLOW \
 with a single "silent_no_signal" reason.
+- "NOW" AND "FUTURE" ARE TWO SEPARATE QUESTIONS. Whether the candidate may be hired today on \
+existing OPT/CPT authorization is one question; whether the employer will sponsor a work visa after \
+that authorization expires is another. Decide both before choosing tags. A posting that answers only \
+one of them has not answered the other.
+- HEDGED WORDING IS NOT A PERMANENT ANSWER. "at this time," "for this position," "for this \
+requisition," and "currently" scope a statement to the present moment or to one job opening. Read \
+them as present-tense facts, not as commitments about the future. In particular, "no sponsorship is \
+available at this time" is "no_future_sponsorship_only", NOT "no_sponsorship_now_or_future".
+- E-VERIFY AND FORM I-983 ARE NOT SPONSORSHIP. Participating in E-Verify is a STEM OPT compliance \
+requirement, and Form I-983 is a STEM OPT training plan. An employer can do both, hire the candidate \
+on STEM OPT, and still never file an H-1B. Never treat E-Verify enrollment, I-983 willingness, or \
+STEM OPT support on its own as evidence of visa sponsorship. Such a posting is not silent either: \
+it has accepted OPT/STEM OPT and left the future open, so tag it "optcpt_future_unstated" for a \
+full-time role rather than "silent_no_signal".
+- Apply these in order, and stop at the first one that fits:
+  1. Posting bars the candidate outright, now and in future -> RED ("citizens_only",
+     "no_sponsorship_now_or_future", or "explicit_no_visa").
+  2. Posting rules out sponsorship in present-tense or role-scoped terms but does not bar someone
+     holding their own work authorization -> RED with "no_future_sponsorship_only".
+  3. Posting explicitly commits to sponsoring H-1B or another work visa -> GREEN with
+     "explicit_h1b_sponsor".
+  4. Posting explicitly accepts OPT/CPT/F-1:
+     a. internship, co-op, or temporary role, or the posting also addresses later sponsorship
+        positively -> GREEN ("explicit_optcpt", plus "optcpt_overrides_generic" when generic
+        work-authorization language appears alongside it).
+     b. full-time or permanent role with nothing said about the period after OPT -> YELLOW with
+        "optcpt_future_unstated". This applies even when generic work-authorization language is
+        present: the OPT/CPT mention still overrides that generic phrase, but overriding it only
+        answers the "now" question, and the "future" question stays open. Do NOT reach for
+        "optcpt_overrides_generic" here - that tag is for 4a only.
+  5. Otherwise fall through to the remaining YELLOW tags ("generic_authorization_only",
+     "vague_conditional", "contradictory", "silent_no_signal").
 - "deadline" must be an ISO calendar date in YYYY-MM-DD form so the UI can render it in a date \
 picker. Convert prose dates ("October 15, 2026" -> "2026-10-15"). If the posting names no \
 application deadline, or the date is too vague to resolve to a single day, use null.
@@ -107,10 +152,16 @@ TAGS_BY_VERDICT: dict[str, frozenset[str]] = {
             "silent_no_signal",
             "vague_conditional",
             "contradictory",
+            "optcpt_future_unstated",
         }
     ),
     "red": frozenset(
-        {"citizens_only", "no_sponsorship_now_or_future", "explicit_no_visa"}
+        {
+            "citizens_only",
+            "no_sponsorship_now_or_future",
+            "explicit_no_visa",
+            "no_future_sponsorship_only",
+        }
     ),
 }
 

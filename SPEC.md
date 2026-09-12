@@ -145,11 +145,45 @@ with a structured prompt.
 
 - **Green** - Text explicitly mentions CPT, OPT, F-1, or H-1B sponsorship as supported. Phrases like "Open to OPT/CPT candidates," "will sponsor H-1B," "F-1 students welcome."
 - **Yellow** - Language is vague, contradictory, or unclear. Examples: "US work authorization required" with no mention of OPT/CPT. "Sponsorship available for exceptional candidates." Contradictions between a platform filter tag and the job body.
-- **Red** - Text explicitly excludes international students. Phrases like "must not require work sponsorship now or in the future," "US citizens and permanent residents only," "no visa sponsorship."
+- **Red** - Either the text excludes international students outright ("must not require work sponsorship now or in the future," "US citizens and permanent residents only"), or it rules out sponsorship in present-tense or role-scoped terms ("no sponsorship is available at this time") so that the role has no path past the OPT window. Both are red, but they mean different things to the user: see "Now and future are two questions" below.
 
 ### Important Edge Case
 
-If a posting says both "US work authorization required" AND explicitly names OPT or CPT as accepted, treat it as **Green**, not Yellow. The explicit mention of OPT/CPT overrides the generic work authorization language.
+If a posting says both "US work authorization required" AND explicitly names OPT or CPT as accepted, the explicit mention of OPT/CPT overrides the generic work authorization language. For an internship or temporary role, or where later sponsorship is addressed positively, that makes it **Green** (`optcpt_overrides_generic`). For a full-time role with nothing said about the period after OPT, the override still holds but only settles the "now" question, so it is **Yellow** (`optcpt_future_unstated`).
+
+### Now and Future Are Two Questions
+
+Whether a student may be hired *today* on existing OPT or CPT authorization, and whether the
+employer will sponsor a work visa *after* that authorization expires, are separate questions. A
+posting can answer one and say nothing about the other, and most of the hard cases come from
+treating an answer to one as an answer to both.
+
+Three consequences the screener has to get right:
+
+- **Hedged wording is present-tense.** "at this time," "for this position," "for this requisition,"
+  and "currently" scope a statement to now or to one opening. "No sponsorship is available at this
+  time" is `no_future_sponsorship_only`, not `no_sponsorship_now_or_future`.
+- **E-Verify and Form I-983 are not sponsorship.** E-Verify participation is a STEM OPT compliance
+  requirement and I-983 is a STEM OPT training plan. An employer can do both, hire a student on STEM
+  OPT, and still never file an H-1B. Neither counts as evidence of sponsorship on its own.
+- **OPT acceptance is sufficient for an internship, not for a career.** For an internship or co-op
+  ending inside the OPT window, explicit OPT/CPT acceptance fully answers the question and is green.
+  For a full-time role with nothing said about the period after OPT, the future question is still
+  open, and that is `optcpt_future_unstated` (yellow).
+
+Tags are chosen by applying these in order and stopping at the first that fits:
+
+1. Bars the candidate outright, now and in future -> red (`citizens_only`,
+   `no_sponsorship_now_or_future`, `explicit_no_visa`).
+2. Rules out sponsorship in present-tense or role-scoped terms, but does not bar someone holding
+   their own work authorization -> red (`no_future_sponsorship_only`).
+3. Explicitly commits to sponsoring a work visa -> green (`explicit_h1b_sponsor`).
+4. Explicitly accepts OPT/CPT/F-1: internship or temporary role, or later sponsorship also addressed
+   positively -> green (`explicit_optcpt`, plus `optcpt_overrides_generic` where generic
+   work-authorization language appears too). Full-time with the future unstated -> yellow
+   (`optcpt_future_unstated`), even when generic work-authorization language is present;
+   `optcpt_overrides_generic` belongs to the green branch only.
+5. Otherwise, the remaining yellow tags.
 
 ### Verdict Sub-Reasons (tiered)
 
@@ -157,7 +191,7 @@ Beyond the top-level verdict, each detected signal is tagged with a **sub-reason
 
 **Green sub-reasons**
 
-- `explicit_optcpt` - Posting explicitly states OPT, CPT, or F-1 status is accepted (e.g. "open to OPT/CPT candidates," "F-1 students welcome").
+- `explicit_optcpt` - Posting explicitly states OPT, CPT, or F-1 status is accepted (e.g. "open to OPT/CPT candidates," "F-1 students welcome"), and either the role is an internship, co-op, or other temporary position ending inside the OPT window, or the posting also speaks positively about sponsorship beyond it.
 - `explicit_h1b_sponsor` - Posting explicitly states the employer will sponsor H-1B or other work visas.
 - `optcpt_overrides_generic` - Posting contains generic "work authorization required" language AND explicit OPT/CPT/sponsorship language elsewhere; the explicit mention overrides the generic phrase (the edge case above).
 
@@ -167,12 +201,14 @@ Beyond the top-level verdict, each detected signal is tagged with a **sub-reason
 - `silent_no_signal` - Posting contains zero language about visa status, sponsorship, or work authorization anywhere. No signal in either direction.
 - `vague_conditional` - Posting offers sponsorship conditionally, not as a commitment (e.g. "sponsorship available for exceptional candidates," "considered on a case-by-case basis").
 - `contradictory` - Posting contains both inclusive and exclusive signals in different sections (e.g. a platform filter tag that conflicts with the job body).
+- `optcpt_future_unstated` - Posting explicitly accepts OPT/CPT/F-1 for a full-time or permanent role but says nothing either way about sponsorship after the OPT window. The student can be hired; whether there is an H-1B path is simply unanswered.
 
 **Red sub-reasons**
 
 - `citizens_only` - Posting explicitly requires US citizenship or permanent residency.
 - `no_sponsorship_now_or_future` - Posting explicitly states no sponsorship now or in the future.
-- `explicit_no_visa` - Posting explicitly states it cannot accommodate visa holders or cannot sponsor employment visas.
+- `explicit_no_visa` - Posting explicitly states it cannot accommodate visa holders at all, so the student cannot be hired even on existing OPT/CPT authorization.
+- `no_future_sponsorship_only` - Posting rules out sponsorship in present-tense or role-scoped terms ("sponsorship is not available for this position," "no sponsorship is available at this time") without barring someone who already holds work authorization. The student can usually still be hired on OPT or STEM OPT; the path after it expires is what is missing.
 
 ### Prompt Output Format
 
