@@ -57,7 +57,17 @@ A large badge showing one of three states:
 - 🟡 **Yellow** - Mixed signals or vague language
 - 🔴 **Red** - Requires US citizenship or permanent residency, or explicitly states no sponsorship
 
-Below the badge, a small **"Why this verdict?"** link. Clicking it opens a modal that lists the exact phrases detected that led to the verdict (e.g., "Detected: 'Open to OPT/CPT' → Greenlight" or "Detected: 'Must not require sponsorship now or in the future' → Red").
+Below the badge, a small **"Why this verdict?"** link. Clicking it opens a modal that explains the
+verdict rather than just naming it. The modal shows, in order:
+
+1. The verdict badge and a one-line summary of what this tier means for the reader.
+2. One block per detected signal: what was found, the exact phrase quoted from the posting, what it
+   actually implies for an F-1 candidate, and the single next step worth taking.
+3. For any signal where the honest answer is "ask the employer" (generic authorization only, silent,
+   vague conditional, contradictory, `optcpt_future_unstated`, `no_future_sponsorship_only`), a
+   copyable recruiter question. It separates the present-tense fact from the future need and pins
+   the ask to the specific requisition, which is what produces a usable answer instead of "the
+   company has sponsored before".
 
 **Structured Job Summary (all fields editable inline)**
 
@@ -171,6 +181,12 @@ Three consequences the screener has to get right:
   For a full-time role with nothing said about the period after OPT, the future question is still
   open, and that is `optcpt_future_unstated` (yellow).
 
+The model must commit to `role_term` before choosing any tag. `internship_or_temporary` is only for
+a role that clearly ends inside the OPT window: an internship, co-op, summer or seasonal role, a
+fellowship with a fixed end, or a contract with a stated end date. Everything else, including
+unspecified, is `ongoing`. Deciding this first matters because "Full-time" usually appears in the
+header of a posting, far from the work-authorization section at the bottom.
+
 Tags are chosen by applying these in order and stopping at the first that fits:
 
 1. Bars the candidate outright, now and in future -> red (`citizens_only`,
@@ -217,6 +233,7 @@ The LLM must return a JSON object with this exact shape:
 ```json
 {
   "verdict": "green" | "yellow" | "red",
+  "role_term": "internship_or_temporary" | "ongoing",
   "verdict_reasons": [
     { "tag": "sub-reason string", "detected_phrase": "exact quoted phrase or null" }
   ],
@@ -241,6 +258,14 @@ returned to the client. Validation rejects an invalid verdict, an unknown sub-re
 `verdict_reasons` list, a wrongly typed field, and a deadline that is neither `null` nor
 `YYYY-MM-DD`. An empty-string deadline is normalized to `null` rather than rejected. A validation
 failure follows the same path as unparseable JSON: retry the call once, then return a 502.
+
+One rule is enforced in code rather than left to the prompt. If the verdict is green, `role_term` is
+`ongoing`, and the only green tags present are `explicit_optcpt` or `optcpt_overrides_generic`, the
+backend rewrites the result to yellow with `optcpt_future_unstated`, preserving the detected phrase,
+and logs the demotion. Green off OPT/CPT acceptance alone is only correct for a role that ends
+inside the OPT window. The model applies this reliably on short postings and unreliably on realistic
+ones, where the "Full-time" marker is far from the visa language, so the rule lives where it cannot
+be talked out of. An explicit `explicit_h1b_sponsor` tag leaves green untouched.
 
 The tier cross-check is deliberately softer. If the sub-reason tags do not match the tier of the
 top-level verdict, the backend logs a warning naming the verdict, the mismatched tags, and the full

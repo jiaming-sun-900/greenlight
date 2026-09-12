@@ -96,6 +96,13 @@ on STEM OPT, and still never file an H-1B. Never treat E-Verify enrollment, I-98
 STEM OPT support on its own as evidence of visa sponsorship. Such a posting is not silent either: \
 it has accepted OPT/STEM OPT and left the future open, so tag it "optcpt_future_unstated" for a \
 full-time role rather than "silent_no_signal".
+- FIRST DECIDE THE ROLE TERM, BEFORE CHOOSING ANY TAG. Set "role_term" to \
+"internship_or_temporary" only when the posting clearly describes a role that ends inside the OPT \
+window: an internship, co-op, summer or seasonal role, a residency or fellowship with a fixed end, \
+or a contract with a stated end date. Otherwise set it to "ongoing". Full-time, permanent, regular, \
+and unspecified all count as "ongoing" - if the posting does not clearly mark the role as \
+fixed-term, it is "ongoing". Words like "Full-time" may appear far from the work-authorization \
+section; read the whole posting before deciding.
 - Apply these in order, and stop at the first one that fits:
   1. Posting bars the candidate outright, now and in future -> RED ("citizens_only",
      "no_sponsorship_now_or_future", or "explicit_no_visa").
@@ -104,10 +111,10 @@ full-time role rather than "silent_no_signal".
   3. Posting explicitly commits to sponsoring H-1B or another work visa -> GREEN with
      "explicit_h1b_sponsor".
   4. Posting explicitly accepts OPT/CPT/F-1:
-     a. internship, co-op, or temporary role, or the posting also addresses later sponsorship
+     a. role_term is "internship_or_temporary", or the posting also addresses later sponsorship
         positively -> GREEN ("explicit_optcpt", plus "optcpt_overrides_generic" when generic
         work-authorization language appears alongside it).
-     b. full-time or permanent role with nothing said about the period after OPT -> YELLOW with
+     b. role_term is "ongoing" and nothing is said about the period after OPT -> YELLOW with
         "optcpt_future_unstated". This applies even when generic work-authorization language is
         present: the OPT/CPT mention still overrides that generic phrase, but overriding it only
         answers the "now" question, and the "future" question stays open. Do NOT reach for
@@ -123,6 +130,7 @@ The JSON object must have exactly this shape:
 
 {
   "verdict": "green" | "yellow" | "red",
+  "role_term": "internship_or_temporary" | "ongoing",
   "verdict_reasons": [
     { "tag": "one of the sub-reason strings above", "detected_phrase": "exact quoted phrase from the posting, or null" }
   ],
@@ -186,6 +194,7 @@ class ScreenResult(BaseModel):
     """The shape the model is asked to return. Validated before anything reaches the client."""
 
     verdict: Literal["green", "yellow", "red"]
+    role_term: Literal["internship_or_temporary", "ongoing"] = "ongoing"
     verdict_reasons: list[VerdictReason] = Field(min_length=1)
     position_title: str = ""
     company_name: str = ""
@@ -206,6 +215,36 @@ class ScreenResult(BaseModel):
         if not ISO_DATE.match(text):
             raise ValueError(f"deadline must be YYYY-MM-DD or null, got {text!r}")
         return text
+
+    @model_validator(mode="after")
+    def _demote_ongoing_optcpt_only(self) -> "ScreenResult":
+        """Green off OPT/CPT alone is only correct for a role that ends inside the OPT window.
+
+        The model reliably gets this right on short postings and reliably gets it wrong on
+        realistic ones, where "Full-time" sits far from the work-authorization section and the
+        explicit OPT/CPT phrase dominates. The rule is mechanical, so enforce it here rather
+        than hoping the prompt wins: an ongoing role whose only green signal is OPT/CPT
+        acceptance has not answered the question of what happens after OPT.
+        """
+        if self.verdict != "green" or self.role_term != "ongoing":
+            return self
+        tags = {reason.tag for reason in self.verdict_reasons}
+        if not tags <= {"explicit_optcpt", "optcpt_overrides_generic"}:
+            # An explicit future-sponsorship commitment is present; green stands.
+            return self
+
+        phrase = next(
+            (r.detected_phrase for r in self.verdict_reasons if r.detected_phrase), None
+        )
+        logger.info(
+            "Demoting green to yellow: ongoing role with OPT/CPT acceptance only (tags=%s)",
+            ", ".join(sorted(tags)),
+        )
+        self.verdict = "yellow"
+        self.verdict_reasons = [
+            VerdictReason(tag="optcpt_future_unstated", detected_phrase=phrase)
+        ]
+        return self
 
     @model_validator(mode="after")
     def _warn_on_tier_mismatch(self) -> "ScreenResult":
