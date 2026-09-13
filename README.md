@@ -44,8 +44,8 @@ Runs at http://localhost:5173
 
 ```bash
 cd backend
-python -m pytest             # offline schema tests, free
-python -m pytest --eval      # also runs the screening eval against the live Claude API (costs money)
+pytest             # offline schema tests, free
+pytest --eval      # also runs the screening eval against the live Claude API (costs money)
 ```
 
 ## Deployment
@@ -62,5 +62,5 @@ and the FastAPI backend runs as a Python Serverless Function under `/api`.
 - `ANTHROPIC_API_KEY` is set in the Vercel project settings. It is read server-side
   only and never reaches the browser bundle.
 
-`POST /api/screen` is rate limited per IP (5 requests per minute, 30 per hour by
+`POST /api/screen` is rate limited per IP (10 requests per minute, 60 per hour by
 default) and rejects a job description longer than 20,000 characters.

@@ -371,9 +371,11 @@ def _strip_code_fences(text: str) -> str:
 # console, not this dict. Adding a shared store would make the count exact, and would
 # also mean adding a database, which this project deliberately does not have.
 #
+# The numbers are sized for a first-time user exploring the app, who will paste
+# several postings back to back, rather than for the narrowest plausible session.
 # Set either limit to 0 to disable that window (useful when running an eval locally).
-RATE_LIMIT_PER_MINUTE = int(os.getenv("SCREEN_RATE_LIMIT_PER_MINUTE", "5"))
-RATE_LIMIT_PER_HOUR = int(os.getenv("SCREEN_RATE_LIMIT_PER_HOUR", "30"))
+RATE_LIMIT_PER_MINUTE = int(os.getenv("SCREEN_RATE_LIMIT_PER_MINUTE", "10"))
+RATE_LIMIT_PER_HOUR = int(os.getenv("SCREEN_RATE_LIMIT_PER_HOUR", "60"))
 
 _request_log: dict[str, deque[float]] = defaultdict(deque)
 
