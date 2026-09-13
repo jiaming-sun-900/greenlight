@@ -133,3 +133,56 @@ class TestOngoingOptcptDemotion:
             verdict_reasons=[{"tag": tag, "detected_phrase": None}],
         )
         assert result.verdict == verdict
+
+
+class TestApplicationPriority:
+    """Priority is a deterministic reading of the verdict and tags, not a model output."""
+
+    @pytest.mark.parametrize(
+        "verdict,role_term,tags,expected",
+        [
+            ("green", "internship_or_temporary", ["explicit_optcpt"], "A"),
+            ("green", "ongoing", ["explicit_h1b_sponsor"], "A"),
+            ("yellow", "ongoing", ["optcpt_future_unstated"], "B"),
+            ("yellow", "ongoing", ["vague_conditional"], "B"),
+            ("yellow", "ongoing", ["contradictory"], "B"),
+            ("yellow", "ongoing", ["generic_authorization_only"], "C"),
+            ("yellow", "ongoing", ["silent_no_signal"], "C"),
+            ("red", "ongoing", ["no_future_sponsorship_only"], "C"),
+            ("red", "ongoing", ["citizens_only"], "D"),
+            ("red", "ongoing", ["no_sponsorship_now_or_future"], "D"),
+            ("red", "ongoing", ["explicit_no_visa"], "D"),
+        ],
+    )
+    def test_priority_mapping(self, verdict, role_term, tags, expected):
+        result = build(
+            verdict=verdict,
+            role_term=role_term,
+            verdict_reasons=[{"tag": t, "detected_phrase": "p"} for t in tags],
+        )
+        assert result.priority == expected
+
+    def test_priority_follows_the_demotion(self):
+        """A demoted posting is a B, not an A: the future question is still open."""
+        result = build(
+            verdict="green",
+            role_term="ongoing",
+            verdict_reasons=[{"tag": "explicit_optcpt", "detected_phrase": "open to OPT"}],
+        )
+        assert (result.verdict, result.priority) == ("yellow", "B")
+
+    def test_a_hard_exclusion_alongside_a_soft_one_is_still_d(self):
+        result = build(
+            verdict="red",
+            role_term="ongoing",
+            verdict_reasons=[
+                {"tag": "no_future_sponsorship_only", "detected_phrase": "no sponsorship"},
+                {"tag": "citizens_only", "detected_phrase": "US citizens only"},
+            ],
+        )
+        assert result.priority == "D"
+
+    def test_model_supplied_priority_is_ignored(self):
+        result = build(priority="A", verdict="yellow", role_term="ongoing",
+                       verdict_reasons=[{"tag": "silent_no_signal", "detected_phrase": None}])
+        assert result.priority == "C"

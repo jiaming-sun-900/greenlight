@@ -234,6 +234,7 @@ The LLM must return a JSON object with this exact shape:
 {
   "verdict": "green" | "yellow" | "red",
   "role_term": "internship_or_temporary" | "ongoing",
+  "priority": "A" | "B" | "C" | "D",
   "verdict_reasons": [
     { "tag": "sub-reason string", "detected_phrase": "exact quoted phrase or null" }
   ],
@@ -274,6 +275,35 @@ the analysis is worthless, so the user still sees their verdict instead of an er
 
 ---
 
+## Application Priority
+
+The verdict says whether the door is open. It does not say where a posting ranks against the
+other thirty in the tracker, and most postings land on yellow, because most postings genuinely say
+nothing about sponsorship. Priority is the second axis: it separates "the employer named OPT/CPT and
+left one question open" from "this posting is silent", which one badge colour cannot do.
+
+| Priority | Means | Applies to |
+|----------|-------|------------|
+| **A** Apply | Both questions answered. Spend an application here. | any green verdict |
+| **B** Ask first | A real signal, and one question would resolve it. | yellow with `optcpt_future_unstated`, `vague_conditional`, or `contradictory` |
+| **C** Low signal | Nothing to go on, or a role with a known end date. | yellow with only `generic_authorization_only` or `silent_no_signal`; red with only `no_future_sponsorship_only` |
+| **D** Skip | Excluded outright. | every other red |
+
+Two deliberate consequences. A posting demoted by the ongoing-role rule is a **B**, not an A: it is
+still worth an application, but the future question is open, which is exactly what the recruiter
+question in the verdict modal is for. And a red `no_future_sponsorship_only` is a **C** rather than a
+D, because a role you can hold until OPT runs out is not a closed door.
+
+Priority is derived from the verdict and tags, never asked of the model: it is a deterministic
+reading of a decision already made. The backend computes it and sends it on `priority`.
+`frontend/src/lib/priority.js` carries a copy for cards saved before the field existed; the two
+mappings must be changed together.
+
+Priority does not change the verdict, the badge, or which column a card sits in. It sorts cards
+within a column, and the tracker offers a Priority / Newest toggle.
+
+---
+
 ## localStorage Schema
 
 All tracker data is stored under a single key `greenlight_cards`.
@@ -286,6 +316,7 @@ Value is a JSON array of card objects:
     "id": "uuid",
     "column": "saved" | "applied" | "interviewing" | "offer" | "closed",
     "verdict": "green" | "yellow" | "red",
+    "priority": "A" | "B" | "C" | "D",
     "verdict_reasons": [
       { "tag": "sub-reason string", "detected_phrase": "exact quoted phrase or null" }
     ],

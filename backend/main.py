@@ -193,6 +193,34 @@ ALL_TAGS = frozenset().union(*TAGS_BY_VERDICT.values())
 
 ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
+# Application priority: how a posting should rank against the others competing for
+# the same application, given that most postings land on yellow. The verdict says
+# whether the door is open; the priority says whether it is worth the walk.
+#
+#   A - apply
+#   B - a real signal, and one question would resolve it
+#   C - no signal at all, or a role with a known end date
+#   D - skip
+#
+# Derived from the verdict and tags, never from the model: this is a deterministic
+# reading of a decision already made.
+SIGNAL_BEARING_YELLOW = frozenset(
+    {"optcpt_future_unstated", "vague_conditional", "contradictory"}
+)
+
+
+def _priority_for(verdict: str, tags: set[str]) -> str:
+    if verdict == "green":
+        return "A"
+    if verdict == "yellow":
+        # An employer who named OPT/CPT, offered conditional sponsorship, or
+        # contradicted itself has given you something to ask about. Silence and
+        # boilerplate have not.
+        return "B" if tags & SIGNAL_BEARING_YELLOW else "C"
+    # Red splits: a role you can still hold until OPT runs out is not the same as
+    # a door that was never open.
+    return "C" if tags == {"no_future_sponsorship_only"} else "D"
+
 
 class VerdictReason(BaseModel):
     tag: str
@@ -211,6 +239,8 @@ class ScreenResult(BaseModel):
 
     verdict: Literal["green", "yellow", "red"]
     role_term: Literal["internship_or_temporary", "ongoing"] = "ongoing"
+    # Filled in by _set_priority below; anything the model sends is overwritten.
+    priority: Literal["A", "B", "C", "D"] = "C"
     verdict_reasons: list[VerdictReason] = Field(min_length=1)
     position_title: str = ""
     company_name: str = ""
@@ -260,6 +290,13 @@ class ScreenResult(BaseModel):
         self.verdict_reasons = [
             VerdictReason(tag="optcpt_future_unstated", detected_phrase=phrase)
         ]
+        return self
+
+    @model_validator(mode="after")
+    def _set_priority(self) -> "ScreenResult":
+        self.priority = _priority_for(
+            self.verdict, {reason.tag for reason in self.verdict_reasons}
+        )
         return self
 
     @model_validator(mode="after")
