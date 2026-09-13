@@ -2,7 +2,7 @@
 
 Visa eligibility screener and job application tracker for F-1 international students.
 
-Live: _not deployed yet - this line gets the `*.vercel.app` URL once the first deploy lands._
+Live: https://greenlight-f1.vercel.app
 
 ## Prerequisites
 
@@ -53,9 +53,11 @@ python -m pytest --eval      # also runs the screening eval against the live Cla
 Greenlight deploys to Vercel as a single project: the frontend builds to static files
 and the FastAPI backend runs as a Python Serverless Function under `/api`.
 
-- `api/index.py` mounts the app from `backend/main.py` at `/api`.
-- `vercel.json` holds the build command, the output directory, and the `/api/*` rewrite.
-- `requirements.txt` at the repository root pins the production Python dependencies.
+- `backend/asgi.py` mounts the app from `backend/main.py` at `/api`.
+- `api/screen.py` and `api/health.py` are the function entry points. Vercel routes by
+  filename, so they land on `/api/screen` and `/api/health` with no rewrite involved.
+- `vercel.json` holds the build command, the output directory, and the function config.
+- `api/requirements.txt` pins the production Python dependencies;
   `backend/requirements.txt` adds the local-only ones on top.
 - `ANTHROPIC_API_KEY` is set in the Vercel project settings. It is read server-side
   only and never reaches the browser bundle.

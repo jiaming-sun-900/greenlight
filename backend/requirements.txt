@@ -1,4 +1,4 @@
 # Local development: the production pins, plus the tools only needed off-server.
--r ../requirements.txt
+-r ../api/requirements.txt
 uvicorn[standard]==0.42.0
 pytest==9.1.1
