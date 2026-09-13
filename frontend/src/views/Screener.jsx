@@ -4,6 +4,8 @@ import JobDetailFields from "../components/JobFields.jsx";
 import ViewToggle from "../components/ViewToggle.jsx";
 import VerdictBadge from "../components/VerdictBadge.jsx";
 import VerdictModal from "../components/VerdictModal.jsx";
+import PriorityChip from "../components/PriorityChip.jsx";
+import { derivePriority } from "../lib/priority.js";
 import { toISODate } from "../lib/dates.js";
 
 const SCREEN_ENDPOINT = "http://localhost:8000/screen";
@@ -23,11 +25,13 @@ const MEASURE_PADDING = "pr-[max(1.25rem,calc(100%-70ch-1.25rem))]";
 
 /** Shape the backend response into the editable draft the panel works with. */
 function toDraft(data) {
+  const verdict_reasons = Array.isArray(data.verdict_reasons)
+    ? data.verdict_reasons
+    : [];
   return {
     verdict: data.verdict,
-    verdict_reasons: Array.isArray(data.verdict_reasons)
-      ? data.verdict_reasons
-      : [],
+    verdict_reasons,
+    priority: data.priority ?? derivePriority(data.verdict, verdict_reasons),
     position_title: data.position_title ?? "",
     company_name: data.company_name ?? "",
     job_functions: data.job_functions ?? "",
@@ -199,7 +203,10 @@ function ResultView({ draft, onChange, onAdd }) {
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
         <div className={MEASURE}>
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <VerdictBadge verdict={draft.verdict} />
+            <div className="flex flex-wrap items-center gap-2">
+              <VerdictBadge verdict={draft.verdict} />
+              <PriorityChip priority={draft.priority} />
+            </div>
             <button
               type="button"
               onClick={() => setShowReasons(true)}

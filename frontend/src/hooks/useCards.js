@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toISODate } from "../lib/dates.js";
+import { PRIORITIES, derivePriority } from "../lib/priority.js";
 
 const STORAGE_KEY = "greenlight_cards";
 
@@ -44,6 +45,10 @@ function normalizeCard(raw) {
       ? raw.preferred_skills.map(asString)
       : [],
     deadline: toISODate(raw.deadline),
+    // Cards saved before priority existed get one derived from what they stored.
+    priority: PRIORITIES.includes(raw.priority)
+      ? raw.priority
+      : derivePriority(raw.verdict, raw.verdict_reasons),
     notes: asString(raw.notes),
     created_at: asString(raw.created_at) || new Date().toISOString(),
   };

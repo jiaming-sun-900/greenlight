@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import JobDetailFields, { PlainField } from "./JobFields.jsx";
+import PriorityChip from "./PriorityChip.jsx";
 import VerdictBadge from "./VerdictBadge.jsx";
 import VerdictModal from "./VerdictModal.jsx";
 import { COLUMNS } from "../hooks/useCards.js";
@@ -59,7 +60,10 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
               />
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <div className="flex flex-wrap items-center gap-2">
               <VerdictBadge verdict={card.verdict} />
+              <PriorityChip priority={card.priority} />
+            </div>
               <button
                 type="button"
                 onClick={() => setShowReasons(true)}

@@ -1,5 +1,6 @@
 import { useDraggable } from "@dnd-kit/core";
 import DeadlineBadge from "./DeadlineBadge.jsx";
+import PriorityChip from "./PriorityChip.jsx";
 
 // Deeper than the pastel badge fills, which are almost invisible as a 4px rule.
 const VERDICT_BORDER = {
@@ -48,6 +49,7 @@ export function CardFace({ card, className = "", ...rest }) {
             (VERDICT_DOT[card.verdict] ?? VERDICT_DOT.yellow)
           }
         />
+        <PriorityChip priority={card.priority} showLabel={false} />
         <DeadlineBadge deadline={card.deadline} />
       </div>
     </article>

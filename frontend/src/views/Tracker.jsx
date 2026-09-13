@@ -11,6 +11,7 @@ import CardModal from "../components/CardModal.jsx";
 import JobCard, { CardFace } from "../components/JobCard.jsx";
 import ViewToggle from "../components/ViewToggle.jsx";
 import { COLUMNS, COLUMN_IDS } from "../hooks/useCards.js";
+import { byPriorityThenRecent } from "../lib/priority.js";
 
 function Column({ column, cards, onOpenCard, highlightId }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
@@ -82,6 +83,41 @@ function EmptyBoard({ onNavigateToScreener }) {
   );
 }
 
+const SORTS = [
+  { id: "priority", label: "Priority" },
+  { id: "recent", label: "Newest" },
+];
+
+/** Reorders cards within every column. Stages are set by dragging, not by sort. */
+function SortToggle({ value, onChange }) {
+  return (
+    <div className="mt-2 flex items-center gap-2">
+      <span className="text-micro uppercase tracking-wide text-muted">Sort</span>
+      <div className="flex items-center gap-1">
+        {SORTS.map((sort) => {
+          const isActive = value === sort.id;
+          return (
+            <button
+              key={sort.id}
+              type="button"
+              onClick={() => onChange(sort.id)}
+              aria-pressed={isActive}
+              className={
+                "rounded-full px-2.5 py-0.5 text-micro font-medium transition-colors " +
+                (isActive
+                  ? "bg-gray-200 text-ink"
+                  : "text-muted hover:bg-gray-100 hover:text-ink")
+              }
+            >
+              {sort.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Tracker({
   nav,
   cards,
@@ -93,6 +129,7 @@ export default function Tracker({
   onHighlightShown,
 }) {
   const [openId, setOpenId] = useState(null);
+  const [sortBy, setSortBy] = useState("priority");
   const [draggingId, setDraggingId] = useState(null);
 
   // A click must not be read as a drag, or cards could never be opened.
@@ -110,12 +147,18 @@ export default function Tracker({
   const byColumn = useMemo(() => {
     const groups = Object.fromEntries(COLUMN_IDS.map((id) => [id, []]));
     for (const card of cards) groups[card.column].push(card);
-    // Newest first, so a freshly added card lands where you can see it.
+    // Priority first answers "where does my next application go", which is the
+    // question a full board is actually asking. Newest first keeps a card you
+    // just added where you can see it. Both tie-break on recency.
     for (const id of COLUMN_IDS) {
-      groups[id].sort((a, b) => b.created_at.localeCompare(a.created_at));
+      groups[id].sort(
+        sortBy === "priority"
+          ? byPriorityThenRecent
+          : (a, b) => b.created_at.localeCompare(a.created_at)
+      );
     }
     return groups;
-  }, [cards]);
+  }, [cards, sortBy]);
 
   const openCard = cards.find((card) => card.id === openId) ?? null;
   const draggingCard = cards.find((card) => card.id === draggingId) ?? null;
@@ -146,6 +189,9 @@ export default function Tracker({
                     cards.length === 1 ? "application" : "applications"
                   }. Drag a card between stages, or click it to edit.`}
             </p>
+            {cards.length > 1 && (
+              <SortToggle value={sortBy} onChange={setSortBy} />
+            )}
           </div>
           <ViewToggle {...nav} />
         </div>
