@@ -20,8 +20,12 @@ No user accounts. No login. All data persists in browser localStorage.
 - **Backend:** FastAPI (Python) - `POST /screen` for screening, plus a `GET /health` liveness check
 - **LLM:** Claude API (`claude-haiku-4-5-20251001`) via Anthropic SDK
 - **Drag and drop:** `dnd-kit`
-- **Deployment:** none configured yet. No deploy target has been chosen and the repo contains no
-  deployment config; the frontend's backend URL is currently hardcoded to `http://localhost:8000`.
+- **Deployment:** Vercel, both halves under one domain. The frontend builds to `frontend/dist` and
+  is served as static files; the FastAPI app runs as a Python Serverless Function via `api/index.py`,
+  which mounts `backend/main.py` under `/api`. `vercel.json` rewrites `/api/*` to that function. The
+  frontend calls the same-origin `/api/screen`, so there is no CORS allow-list to maintain and no
+  hardcoded backend URL. `ANTHROPIC_API_KEY` is set in the Vercel project settings and stays
+  server-side.
 - **Persistence:** localStorage only (no database for MVP)
 
 ---

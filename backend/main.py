@@ -2,11 +2,13 @@ import json
 import logging
 import os
 import re
+import time
+from collections import defaultdict, deque
 from typing import Literal
 
 import anthropic
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
@@ -20,16 +22,33 @@ client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from the environment (
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# In both environments the frontend and the API are same-origin - Vercel serves them
+# under one domain, and the Vite dev server proxies /api to this process - so there is
+# normally no CORS to configure. ALLOWED_ORIGINS exists only for the contributor who
+# runs the frontend against this backend cross-origin; it is a comma-separated list,
+# and no domain is hardcoded here.
+_allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+if _allowed_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_allowed_origins,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+
+# A job description far longer than this is not a posting. The cap keeps a single
+# request from spending an unbounded amount of Claude credit, and it is enforced by
+# the schema so an oversized body is rejected before the model is ever called.
+MAX_JOB_DESCRIPTION_CHARS = 20_000
 
 
 class ScreenRequest(BaseModel):
-    job_description: str
+    job_description: str = Field(max_length=MAX_JOB_DESCRIPTION_CHARS)
 
 
 SYSTEM_PROMPT = """You are a visa-eligibility screener for international students on F-1 visas. \
@@ -341,13 +360,79 @@ def _strip_code_fences(text: str) -> str:
     return stripped.strip()
 
 
+# Per-IP rate limiting. /screen is unauthenticated and every call spends real Claude
+# credit, so an unthrottled endpoint is an open tab on someone else's card.
+#
+# The counter lives in this process, which on Vercel means one serverless instance.
+# That is deliberate and it is a real limit rather than a complete one: rapid repeated
+# requests from one IP land on the same warm instance and get throttled, which is the
+# abuse pattern that matters, but a slow attacker spread across cold starts can exceed
+# these numbers. The hard ceiling on spend is the limit configured in the Anthropic
+# console, not this dict. Adding a shared store would make the count exact, and would
+# also mean adding a database, which this project deliberately does not have.
+#
+# Set either limit to 0 to disable that window (useful when running an eval locally).
+RATE_LIMIT_PER_MINUTE = int(os.getenv("SCREEN_RATE_LIMIT_PER_MINUTE", "5"))
+RATE_LIMIT_PER_HOUR = int(os.getenv("SCREEN_RATE_LIMIT_PER_HOUR", "30"))
+
+_request_log: dict[str, deque[float]] = defaultdict(deque)
+
+
+def _client_ip(request: Request) -> str:
+    """Best-effort client address. Vercel sets x-forwarded-for; uvicorn sets neither."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _enforce_rate_limit(request: Request) -> None:
+    windows = [(60.0, RATE_LIMIT_PER_MINUTE), (3600.0, RATE_LIMIT_PER_HOUR)]
+    active = [(seconds, limit) for seconds, limit in windows if limit > 0]
+    if not active:
+        return
+
+    longest = max(seconds for seconds, _ in active)
+    now = time.monotonic()
+    ip = _client_ip(request)
+
+    # Drop IPs whose most recent request has aged out, so the dict cannot grow without
+    # bound across the lifetime of a warm instance.
+    for known_ip in [k for k, times in _request_log.items() if times and now - times[-1] > longest]:
+        del _request_log[known_ip]
+
+    seen = _request_log[ip]
+    while seen and now - seen[0] > longest:
+        seen.popleft()
+
+    for seconds, limit in active:
+        in_window = sum(1 for stamp in seen if now - stamp <= seconds)
+        if in_window >= limit:
+            retry_after = int(seconds - (now - seen[-in_window])) + 1
+            logger.warning(
+                "Rate limit hit: ip=%s window=%ss limit=%s", ip, int(seconds), limit
+            )
+            raise HTTPException(
+                status_code=429,
+                detail="Too many screening requests. Please wait a moment and try again.",
+                headers={"Retry-After": str(max(retry_after, 1))},
+            )
+
+    seen.append(now)
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
 
 @app.post("/screen")
-def screen(request: ScreenRequest):
+def screen(request: ScreenRequest, http_request: Request):
+    _enforce_rate_limit(http_request)
+
     if not request.job_description.strip():
         raise HTTPException(status_code=400, detail="job_description must not be empty.")
 

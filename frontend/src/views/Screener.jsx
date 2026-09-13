@@ -8,7 +8,10 @@ import PriorityChip from "../components/PriorityChip.jsx";
 import { derivePriority } from "../lib/priority.js";
 import { toISODate } from "../lib/dates.js";
 
-const SCREEN_ENDPOINT = "http://localhost:8000/screen";
+// Same-origin in both environments: Vercel serves the API alongside the app, and
+// the Vite dev server proxies /api to the local backend. VITE_SCREEN_ENDPOINT is
+// an escape hatch for pointing the frontend at a backend somewhere else.
+const SCREEN_ENDPOINT = import.meta.env.VITE_SCREEN_ENDPOINT ?? "/api/screen";
 
 // Panels stretch with the viewport, but prose inside them does not: past roughly
 // 70 characters a line gets hard to track back from. Applied to the text content

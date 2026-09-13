@@ -1,0 +1,6 @@
+# Production dependencies for the Vercel Python Function in api/.
+# Local development installs these too, via backend/requirements.txt.
+fastapi==0.135.2
+anthropic==0.116.0
+python-dotenv==1.2.2
+pydantic==2.12.5
