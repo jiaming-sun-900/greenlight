@@ -33,7 +33,10 @@ No user accounts. No login. All data persists in browser localStorage.
 
 ## Page Structure
 
-The app has two main views accessible via a top navigation bar:
+The app has two main views. There is no app header: each view owns its own title row, and a
+Screener/Tracker toggle rides along in it. Both views share one page container
+(`frontend/src/components/ViewShell.jsx`), so the title and the toggle sit in exactly the same
+place in each and nothing shifts when the user switches.
 
 1. **Screener** (default landing view)
 2. **Tracker**
@@ -194,17 +197,26 @@ header of a posting, far from the work-authorization section at the bottom.
 
 Tags are chosen by applying these in order and stopping at the first that fits:
 
-1. Bars the candidate outright, now and in future -> red (`citizens_only`,
+1. Two explicit statements in the posting directly oppose each other, and neither is merely a
+   narrower scope of the other -> yellow (`contradictory`), with one entry per opposing phrase.
+   This is applied before every other step, including the red ones, and the verdict is yellow
+   however strict one of the two statements sounds: a posting that both promises sponsorship and
+   forbids it has not answered the question, so the candidate needs to ask rather than be told no.
+   It does not apply when a job-board tag, benefits blurb, or boilerplate line is corrected or
+   narrowed by a specific statement in the job body (the specific statement wins, carry on), nor
+   when a generic work-authorization phrase merely sits alongside an explicit OPT/CPT mention
+   (that is `optcpt_overrides_generic`).
+2. Bars the candidate outright, now and in future -> red (`citizens_only`,
    `no_sponsorship_now_or_future`, `explicit_no_visa`).
-2. Rules out sponsorship in present-tense or role-scoped terms, but does not bar someone holding
+3. Rules out sponsorship in present-tense or role-scoped terms, but does not bar someone holding
    their own work authorization -> red (`no_future_sponsorship_only`).
-3. Explicitly commits to sponsoring a work visa -> green (`explicit_h1b_sponsor`).
-4. Explicitly accepts OPT/CPT/F-1: internship or temporary role, or later sponsorship also addressed
+4. Explicitly commits to sponsoring a work visa -> green (`explicit_h1b_sponsor`).
+5. Explicitly accepts OPT/CPT/F-1: internship or temporary role, or later sponsorship also addressed
    positively -> green (`explicit_optcpt`, plus `optcpt_overrides_generic` where generic
    work-authorization language appears too). Full-time with the future unstated -> yellow
    (`optcpt_future_unstated`), even when generic work-authorization language is present;
    `optcpt_overrides_generic` belongs to the green branch only.
-5. Otherwise, the remaining yellow tags.
+6. Otherwise, the remaining yellow tags.
 
 ### Verdict Sub-Reasons (tiered)
 
@@ -221,7 +233,7 @@ Beyond the top-level verdict, each detected signal is tagged with a **sub-reason
 - `generic_authorization_only` - Posting requires "US work authorization" (or similar) with no explicit OPT/CPT mention and no explicit exclusion. Ambiguous - could include or exclude international students.
 - `silent_no_signal` - Posting contains zero language about visa status, sponsorship, or work authorization anywhere. No signal in either direction.
 - `vague_conditional` - Posting offers sponsorship conditionally, not as a commitment (e.g. "sponsorship available for exceptional candidates," "considered on a case-by-case basis").
-- `contradictory` - Posting contains both inclusive and exclusive signals in different sections (e.g. a platform filter tag that conflicts with the job body).
+- `contradictory` - Posting contains two explicit, directly opposing statements in different sections (e.g. a benefits section promising H-1B sponsorship against a requirement that candidates never need sponsorship). A job-board filter tag narrowed by a specific statement in the body is *not* this: the specific statement wins. Outranks every other tag, including the red ones.
 - `optcpt_future_unstated` - Posting explicitly accepts OPT/CPT/F-1 for a full-time or permanent role but says nothing either way about sponsorship after the OPT window. The student can be hired; whether there is an H-1B path is simply unanswered.
 
 **Red sub-reasons**
@@ -239,7 +251,6 @@ The LLM must return a JSON object with this exact shape:
 {
   "verdict": "green" | "yellow" | "red",
   "role_term": "internship_or_temporary" | "ongoing",
-  "priority": "A" | "B" | "C" | "D",
   "verdict_reasons": [
     { "tag": "sub-reason string", "detected_phrase": "exact quoted phrase or null" }
   ],
@@ -262,8 +273,16 @@ or the date is too vague to resolve to a single day, it returns `null`.
 The model's response is validated against the `ScreenResult` model in `backend/main.py` before it is
 returned to the client. Validation rejects an invalid verdict, an unknown sub-reason tag, an empty
 `verdict_reasons` list, a wrongly typed field, and a deadline that is neither `null` nor
-`YYYY-MM-DD`. An empty-string deadline is normalized to `null` rather than rejected. A validation
-failure follows the same path as unparseable JSON: retry the call once, then return a 502.
+`YYYY-MM-DD`. The deadline check is a real calendar check, not just a shape check: `2026-13-45` and
+`2026-02-31` match the pattern but are rejected, because a date picker cannot render them and
+`new Date()` would silently roll them over into a different, plausible-looking day. An empty-string
+deadline is normalized to `null` rather than rejected. A validation failure follows the same path as
+unparseable JSON: retry the call once, then return a 502.
+
+A reply wrapped in a code fence, or prefixed with a conversational preamble, is unwrapped before
+parsing rather than being spent as a retry. A reply cut off at `max_tokens` is retried once with a
+larger ceiling. A refusal is not retried at all: it returns a 422, because the same posting refused
+once will be refused again.
 
 One rule is enforced in code rather than left to the prompt. If the verdict is green, `role_term` is
 `ongoing`, and the only green tags present are `explicit_optcpt` or `optcpt_overrides_generic`, the
@@ -272,6 +291,20 @@ and logs the demotion. Green off OPT/CPT acceptance alone is only correct for a 
 inside the OPT window. The model applies this reliably on short postings and unreliably on realistic
 ones, where the "Full-time" marker is far from the visa language, so the rule lives where it cannot
 be talked out of. An explicit `explicit_h1b_sponsor` tag leaves green untouched.
+
+`POST /screen` guards the request as well as the response. A blank body is a 400; a body over
+20,000 characters is a 400 with a plain-English message (not FastAPI's default 422, whose `detail`
+is a list of objects that the frontend would render as `[object Object]`). Calls are rate limited
+per IP, 10 per minute and 60 per hour by default, overridable with `SCREEN_RATE_LIMIT_PER_MINUTE`
+and `SCREEN_RATE_LIMIT_PER_HOUR` and disabled by setting either to 0. Over the limit is a 429 with
+`Retry-After`. The client address is read from the headers the platform sets rather than from the
+leftmost `x-forwarded-for` entry, which the caller controls and could rotate to buy itself unlimited
+quota. The counter is per warm instance and the dict is capped, so it is a real limit rather than a
+complete one; the hard ceiling on spend is the limit set in the Anthropic console.
+
+Upstream failures keep their own status codes: a timeout is a 504, an upstream rate limit is a 429,
+anything else from the Claude API is a 502. No `detail` returned to the client carries upstream
+exception text or a pydantic error dump; those go to the server log.
 
 The tier cross-check is deliberately softer. If the sub-reason tags do not match the tier of the
 top-level verdict, the backend logs a warning naming the verdict, the mismatched tags, and the full
@@ -363,17 +396,14 @@ Value is a JSON array of card objects:
 
 Accepted for now, tracked here so they do not get rediscovered as surprises:
 
-- **Backend URL is hardcoded.** `SCREEN_ENDPOINT` in `frontend/src/views/Screener.jsx` points at
-  `http://localhost:8000` with no environment variable, so the frontend cannot be aimed at a
-  deployed backend without a code change. Blocks deployment.
 - **No CI.** `backend/tests/` covers schema validation offline and the screening rules against the
   live API (`pytest --eval`), but nothing runs either automatically. ESLint is configured
   (`npm run lint`) and equally unenforced. The frontend has no tests at all.
 - **npm audit vulnerabilities.** `npm audit` reports 9 findings (1 low, 2 moderate, 6 high), all in
   transitive dev-tooling dependencies (babel, browserslist, postcss, and similar). None are in
   runtime dependencies shipped to the browser. All are fixable via `npm audit fix`.
-- **Dead files in the frontend.** `src/App.css` is the unmodified Vite template stylesheet and is
-  imported nowhere; `src/assets/hero.png`, `react.svg`, and `vite.svg` are unreferenced.
+- **No frontend tests.** The behaviour of `useCards`, `useScreening`, `useDialog`, and the date
+  helpers is covered only by manual checks. The backend suite has no counterpart here.
 
 ---
 

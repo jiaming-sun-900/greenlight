@@ -6,7 +6,7 @@ Live: https://greenlight-f1.vercel.app
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 20.19+ or 22.12+ (required by the pinned Vite 8)
 - Python 3.11+
 
 You do not need a Vercel account to run Greenlight locally.
