@@ -20,14 +20,12 @@ No user accounts. No login. All data persists in browser localStorage.
 - **Backend:** FastAPI (Python) - `POST /screen` for screening, plus a `GET /health` liveness check
 - **LLM:** Claude API (`claude-haiku-4-5-20251001`) via Anthropic SDK
 - **Drag and drop:** `dnd-kit`
-- **Deployment:** Vercel, both halves under one domain. The frontend builds to `frontend/dist` and
-  is served as static files; the FastAPI app runs as Python Serverless Functions. `backend/asgi.py`
-  mounts `backend/main.py` under `/api`, and `api/screen.py` and `api/health.py` are the entry points
-  Vercel routes to by filename. The
-  frontend calls the same-origin `/api/screen`, so there is no CORS allow-list to maintain and no
-  hardcoded backend URL. `ANTHROPIC_API_KEY` is set in the Vercel project settings and stays
-  server-side.
-- **Persistence:** localStorage only (no database for MVP)
+- **Deployment:** Vercel, both halves under one domain, so the frontend calls a same-origin
+  `/api/screen` and there is no CORS allow-list to maintain and no hardcoded backend URL. See
+  README.md > Deployment for the file-by-file detail.
+- **Persistence:** localStorage only. **This is a decision, not a gap: do not add a database.**
+  Greenlight has no persistence requirement that a browser cannot meet, and adding one would turn a
+  stateless proxy into a service with accounts, migrations, and somebody else's data to lose.
 
 ---
 
@@ -91,7 +89,9 @@ All fields are editable directly in the right panel. The user can correct any AI
 
 At the bottom of the right panel, a button: **"Add to Tracker →"**
 
-Clicking this creates a card in the Tracker's **Saved** column using the current right panel data (including any user edits) and the verdict color. It then navigates the user to the Tracker view.
+Clicking this creates a card in the Tracker's **Saved** column using the current right panel data (including any user edits) and the verdict color. It then navigates the user to the Tracker view, clears the screener bench for the next posting, and
+rings the new card for 2.5 seconds. Under the default priority sort a new C or D card lands at the
+bottom of a long column, so the board scrolls it into view rather than animating a ring off screen.
 
 ---
 
@@ -107,13 +107,14 @@ Five columns, left to right:
 4. **Offer** - Received an offer
 5. **Closed** - Rejected, withdrawn, or expired
 
-Cards can be dragged between any columns freely.
+Cards can be dragged between any columns freely. A mouse drag starts after 6px of movement, so a click still opens the card; a touch drag starts after a 200ms hold, so a swipe scrolls the column instead of picking a card up. The whole column is the drop target, header included, and dropping a card back in the column it came from is a no-op rather than a rewrite of the whole board.
 
 ### Job Card (front face)
 
 Each card displays:
-- Colored left border (light green / light yellow / light red matching the verdict)
-- Card background is white or near-white so text is always readable
+- Colored left border matching the verdict (`edge-green` / `edge-yellow` / `edge-red`)
+- Card background is the `surface` token, so it is readable in either theme
+- A verdict dot and the **priority letter** (letter only, no label: the full chip is for the screener panel and the card modal)
 - **Position Title** (bold)
 - **Company Name**
 - **Deadline badge** - four states, so a deadline entered on a card is never invisible:
@@ -146,6 +147,15 @@ Clicking a card opens a centered modal overlay showing the full AI-generated rep
 A **"Close"** button dismisses the modal. Edits auto-save on every keystroke rather than on close:
 each change is written straight through to the card store, which persists to localStorage. This is
 intentional, and means a card can never lose edits to a refresh or a stray click on the backdrop.
+
+Both modals behave the same way, and the behaviour lives once in `frontend/src/hooks/useDialog.js`:
+focus moves into the dialog on open and back to whatever opened it on close, Tab is trapped inside,
+the page behind stops scrolling, and the dialog is capped at the viewport height with its body
+scrolling internally so a long verdict never pushes its own Close button off a phone screen.
+Escape peels one layer at a time, so a verdict modal opened on top of a card modal closes only
+itself. Clicking the backdrop closes, but only when the press both starts and ends there:
+drag-selecting text inside the dialog and releasing past its edge used to count as a click on the
+backdrop.
 By the time the modal closes, everything is already saved.
 
 A **"Delete Card"** button (red, bottom of modal) removes the card after a confirmation prompt.
@@ -296,7 +306,7 @@ be talked out of. An explicit `explicit_h1b_sponsor` tag leaves green untouched.
 20,000 characters is a 400 with a plain-English message (not FastAPI's default 422, whose `detail`
 is a list of objects that the frontend would render as `[object Object]`). Calls are rate limited
 per IP, 10 per minute and 60 per hour by default, overridable with `SCREEN_RATE_LIMIT_PER_MINUTE`
-and `SCREEN_RATE_LIMIT_PER_HOUR` and disabled by setting either to 0. Over the limit is a 429 with
+and `SCREEN_RATE_LIMIT_PER_HOUR` and disabled per window by setting that one to 0, or entirely by setting both. Over the limit is a 429 with
 `Retry-After`. The client address is read from the headers the platform sets rather than from the
 leftmost `x-forwarded-for` entry, which the caller controls and could rotate to buy itself unlimited
 quota. The counter is per warm instance and the dict is capped, so it is a real limit rather than a
@@ -369,15 +379,28 @@ Value is a JSON array of card objects:
 ]
 ```
 
+This is the only copy of the user's data. There is no backend persistence and no account, so
+clearing site data destroys it.
+
+Cards are read once at mount and the whole array is written back on every change, which means a
+second tab would otherwise write an array that never contained this tab's cards. Each tab listens
+for the `storage` event on this key and adopts what the other one wrote. That is adoption, not a
+merge: the last writer still wins, but a card can no longer vanish silently.
+
+Every card loaded from storage goes through `normalizeCard`, which coerces each field to something
+valid, backfills `priority` for cards saved before that field existed, and settles the verdict
+*before* deriving a priority from it. A card whose stored verdict is missing or wrongly cased would
+otherwise render a yellow badge next to the worst possible priority.
+
 ---
 
 ## Visual Design Guidelines
 
 - Clean, minimal aesthetic. Lots of white space.
-- Accent colors tied to verdict only: use muted/pastel versions - `#d1fae5` (light green), `#fef9c3` (light yellow), `#fee2e2` (light red).
+- Accent colors tied to verdict only, and always as a fill/foreground **pair** rather than two loose values: `good`, `warn`, `bad`, `urgent`, `neutral`. Each pair has a light and a dark value.
 - Primary font: Inter or system-ui.
 - The traffic light / signal metaphor should be present but not overdone. One clear icon or badge per verdict is enough.
-- Dark mode is a future consideration, not MVP.
+- **Light and dark themes, both first class.** Every colour is a semantic token in the `@theme` block of `frontend/src/index.css`, redefined once under `.dark`; no component carries a `dark:` utility or names a literal colour. A sun/moon switch sits beside the view toggle. The default follows the operating system and keeps following it until the user picks a side, and that choice is remembered. An inline script in `index.html` applies the class before first paint so a dark-mode user never sees a white flash. Both themes meet WCAG AA on every visible text node. See CLAUDE.md > Surfaces and dark mode for the token list and the rules.
 
 ---
 
@@ -407,15 +430,3 @@ Accepted for now, tracked here so they do not get rediscovered as surprises:
 
 ---
 
-## Build Order
-
-1. Scaffold React frontend + FastAPI backend
-2. Build the two-panel Screener UI (static, no API yet)
-3. Wire in Claude API call and display structured output in right panel
-4. Add verdict badge and "Why this verdict?" modal
-5. Build editable fields in right panel
-6. Build Kanban board with dnd-kit (static cards first)
-7. Wire "Add to Tracker" button - create card from screener data
-8. Implement localStorage persistence (save, load, update, delete)
-9. Add deadline countdown badge logic
-10. Polish: transitions, loading states, empty states, mobile responsiveness

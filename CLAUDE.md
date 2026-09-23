@@ -9,8 +9,8 @@ Visa eligibility screener and job application tracker for international students
 - `api/screen.py` and `api/health.py` are the Vercel Serverless Function entry points: 12-line shims that put `backend/` on the import path and import `backend/asgi.py`, which mounts the app from `backend/main.py` under `/api`. Vercel routes by filename, so they land on `/api/screen` and `/api/health`. `vercel.json` holds the build command and function config; `api/requirements.txt` pins the production deps and `backend/requirements.txt` adds the local-only ones on top.
 - The backend reads `ANTHROPIC_API_KEY` from `backend/.env` (gitignored, never commit it).
 - **No CORS origin is hardcoded, and by default no CORS middleware is installed at all.** The frontend and API are same-origin in both environments: Vercel serves them under one domain, and the Vite dev server proxies `/api` to the local backend with the prefix stripped (see `frontend/vite.config.js`). `ALLOWED_ORIGINS` is a comma-separated escape hatch for running the frontend cross-origin; the middleware is added only when it is set.
-- `POST /screen` is rate limited per IP (10/min, 60/hr by default, via `SCREEN_RATE_LIMIT_PER_MINUTE` / `SCREEN_RATE_LIMIT_PER_HOUR`, either set to 0 to disable) and rejects a job description over `MAX_JOB_DESCRIPTION_CHARS` (20,000) with a 400. The frontend mirrors that cap in `hooks/useScreening.js` so an over-long paste is caught before a round trip.
-- Backend tests live in `backend/tests/`. `pytest` runs the offline ones (schema validation, free). `pytest --eval` additionally runs the screening eval against the live Claude API, which costs money, so it is opt-in. When you change a screening rule, add the posting that motivated it to `backend/tests/postings.py` first.
+- `POST /screen` is rate limited per IP (10/min, 60/hr by default, via `SCREEN_RATE_LIMIT_PER_MINUTE` / `SCREEN_RATE_LIMIT_PER_HOUR`, set one to 0 to disable that window; both must be 0 to turn the limiter off) and rejects a job description over `MAX_JOB_DESCRIPTION_CHARS` (20,000) with a 400. The frontend mirrors that cap in `hooks/useScreening.js` so an over-long paste is caught before a round trip.
+- Backend tests live in `backend/tests/`. `pytest` runs the 64 offline ones for free: `test_validation.py` covers the `ScreenResult` schema and the priority table, `test_screen_route.py` covers the `/screen` route, the retry loop, the status codes and the rate limiter with `_call_model` stubbed. `pytest --eval` additionally runs the screening eval against the live Claude API, which costs money, so it is opt-in. When you change a screening rule, add the posting that motivated it to `backend/tests/postings.py` first.
 
 ## Typography scale
 
@@ -18,7 +18,7 @@ Use a fixed font size hierarchy across the whole frontend. The scale is defined 
 
 | Token          | Size                  | Pairing                              | Use for |
 |----------------|-----------------------|--------------------------------------|---------|
-| `text-micro`   | 12px                  | `font-medium` for chips and badges; plain, plus `tabular-nums`, for counts | Deadline badge, view-toggle tracked count, panel char count, panel status ("Editable"), column counts |
+| `text-micro`   | 12px                  | `font-medium` for chips and badges; plain, plus `tabular-nums`, for counts | Deadline badge, view-toggle tracked count, panel char count, panel status ("Analyzing…" / "Editable" / "Preview"), column counts |
 | `text-label`   | 14px                  | `font-medium uppercase tracking-wide` for field labels; `font-medium` alone for small text buttons; plain for passive metadata | Field labels ("POSITION TITLE"), "+ Add skill", the tracker's Sort label and its two buttons, column hints, fine print, the screener's panel empty state, empty column text, card company name |
 | `text-body`    | 16px                  | `font-normal` for prose, `font-medium` for buttons and links, `font-semibold` for a Kanban card title | Base body text, form inputs, buttons, view-toggle labels, interactive links ("Why this verdict?"), field values, list items, verdict badge, Kanban card title, the tracker's empty-board copy |
 | `text-title`   | 20px                  | `font-semibold`                       | Panel headers ("Job description", "Analysis"), column headings, modal titles, the card modal's position-title field, empty-state headings; the brand wordmark adds `tracking-tight` |
@@ -31,11 +31,33 @@ Notes on the scale:
 - A Kanban card title is the exception that proves it: at `text-body font-semibold` it outranks the company name under it without competing with the column heading above it. Weight, not size, does that work.
 - Weight and tracking are part of the tier, not a per-instance choice. Use the pairing in the table. Color is a separate axis from size: see "Text color" below.
 - Icon and glyph sizes are not type. Decorative glyphs use the `icon-lg` utility (backed by `--icon-lg` in `@theme`), never a `text-*` token borrowed as a font-size hack.
-- Button size is a utility, not a per-instance choice. There are two shapes, both defined in `index.css`: `btn-pill` for a hero call to action (Analyze, the empty board's "Screen a job posting") and `btn-block` for an action belonging to a panel or a modal footer (Add to Tracker, both modal Close buttons, Delete). Both carry `text-body font-medium` and the same height, so a footer does not change size when its buttons swap. Pair either with `btn-accent` for the accent fill. Every interactive element also takes `focus-ring`, the app's single focus-visible treatment.
+- Button size is a utility, not a per-instance choice. There are two shapes, both defined in `index.css`: `btn-pill` for a hero call to action (Analyze, the empty board's "Screen a job posting") and `btn-block` for an action belonging to a panel or a modal footer (Add to Tracker, both modal Close buttons, Delete). Both carry `text-body font-medium` and the same height, so a footer does not change size when its buttons swap. Pair either with `btn-accent` for the accent fill, whose gradient is deliberately a step darker than the brand green: white on `#059669` is 3.77:1, under the 4.5:1 AA bar, and that green carries the label of every primary action.
+- Focus is visible on everything, in one of two ways. Buttons, links, and anything else that is not a form control take `focus-ring`. Form controls keep the inline treatment in `JobFields.jsx` (`focus:border-accent` plus a soft accent ring), because a field that already has a border should thicken it rather than grow a second ring outside it. Do not put both on one element. The job-description textarea is the exception that needs neither: it is borderless and fills its panel, so the ring sits on its wrapper via `focus-within`.
+
+## Surfaces and dark mode
+
+**No component in this app knows what theme it is in.** There is not one `dark:` utility anywhere in `frontend/src`, and there must not be. Every colour goes through a semantic token defined in the `@theme` block of `frontend/src/index.css` and redefined once, wholesale, under `.dark`. If a surface is named for what it is, it flips for free; if you reach for `bg-white` or a `gray-N` shade, you have just written a component that only works in daylight.
+
+| Token | Use for |
+|-------|---------|
+| `bg-bg` | the page behind everything |
+| `bg-surface` | panels, tracker columns, cards, modals |
+| `bg-sunken` | a box inset into a surface (a reason item, a far-off deadline chip) |
+| `border-border` | the edge of a surface |
+| `border-border-soft` | a divider inside a surface |
+| `bg-hover` | the fill a quiet control takes on hover |
+| `bg-selected` | a control that is chosen, not merely pointed at |
+| `bg-overlay` | the modal backdrop |
+
+Status colour is a **pair**, never a loose fill and a loose foreground: `good`, `warn`, `bad`, `urgent`, and `neutral` each have a `-bg` and the one `-fg` guaranteed readable on it in both themes. Never mix a fill from one pair with a foreground from another. `dot-*` and `edge-*` carry the verdict dot and the 4px rule down a card's left edge; `danger` is destructive text and flips with the theme, while `danger-fill` is the solid confirm button and does not, since white has to stay readable on it either way.
+
+The theme itself is a class on `<html>`, set by an inline script in `index.html` before first paint (React mounts too late to avoid a white flash) and kept in sync afterwards by `hooks/useTheme.js`, which owns the `greenlight_theme` key. Three states: `light`, `dark`, and `system`, which is the default and stays live, following the OS if it flips at sunset. `ThemeToggle.jsx` is a plain two-way switch that pins the choice; the glyph shows the theme you will get, not the one you are in. `color-scheme` is set alongside the class so the browser's own scrollbars, form controls and date picker follow.
+
+**Both themes must pass WCAG AA on every visible text node.** That is checkable, not a matter of taste: resolve each element's painted background (compositing translucent layers and any positioned overlay behind it) and require 4.5:1, or 3:1 for text at 24px or at 18.66px bold.
 
 ## Text color
 
-Three text colors, and no ad hoc `text-gray-*` shades. Size encodes rank, color encodes how closely the reader is meant to parse the text, and the two are chosen independently.
+Three text colors, and no ad hoc `text-gray-*` shades. All three are tokens and all three flip with the theme. Size encodes rank, color encodes how closely the reader is meant to parse the text, and the two are chosen independently.
 
 | Token        | Value     | Use for |
 |--------------|-----------|---------|
@@ -45,7 +67,13 @@ Three text colors, and no ad hoc `text-gray-*` shades. Size encodes rank, color 
 
 `text-text` is also the root default set on the app shell in `App.jsx`, so an element that sets no color inherits it. That is a fallback, not a choice: anything carrying real text picks `ink` or `muted` explicitly.
 
-`ink` and `muted` are defined in the `@theme` block of `frontend/src/index.css`. Both are deliberately darker than a typical gray ramp's 500/400: at these sizes the lighter shades read as disabled rather than secondary. Neither is pure black. An icon-only button that is `text-muted` at rest goes to `text-ink` on hover rather than to a third shade.
+`ink` and `muted` are defined in the `@theme` block of `frontend/src/index.css`, with dark-theme values under `.dark`. In light mode both are deliberately darker than a typical gray ramp's 500/400: at these sizes the lighter shades read as disabled rather than secondary. In dark mode they are correspondingly lighter, and the greys lean blue rather than neutral, which reads as a deliberate surface rather than as a screen that failed to light up. Nothing in either theme is pure black or pure white. An icon-only button that is `text-muted` at rest goes to `text-ink` on hover rather than to a third shade.
+
+## State ownership
+
+**The two views are swapped by a conditional render in `App.jsx`, so each one unmounts completely every time the user switches.** Anything that must survive that lives in `App`, not in the view. Today that is the card store (`useCards`), the screener's whole working session (`useScreening`: the pasted posting, the draft, the in-flight request, the error), the board's sort order, the just-added highlight id, and the theme. Putting new screener or tracker state inside the view is the natural thing to do and it silently re-breaks the bug this exists to fix: a user who pasted a posting, analyzed it, corrected it by hand, and then looked at the tracker came back to an empty panel.
+
+The request lifecycle is a matched pair across the two halves and has to be changed as one: the browser aborts an analysis after 60s (`REQUEST_TIMEOUT_MS` in `useScreening.js`), and the backend allows at most two 20s SDK attempts inside Vercel's 60s `maxDuration` (`vercel.json`). The in-flight request is also aborted when the screener unmounts or when a new Analyze starts, because an orphaned call still bills a Claude request nobody will read.
 
 ## Layout and responsiveness
 
@@ -58,6 +86,7 @@ Three text colors, and no ad hoc `text-gray-*` shades. Size encodes rank, color 
 
 ## Writing style
 
+- All content in this repository is in English: code, identifiers, comments, commit messages, documentation, and UI copy. The repository is public and Greenlight's users are international students.
 - No em dashes in anything the user sees: UI text, and messages written to the user. Use hyphens, colons, or reworded sentences instead. Em dashes inside code comments or internal prompt strings (things the user will not read) are fine.
 - Keep chat responses, explanations, and code comments concise. Don't restate context back to the user.
 
