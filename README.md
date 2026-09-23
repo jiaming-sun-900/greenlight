@@ -84,14 +84,16 @@ There is no account and no server-side copy, so clearing site data clears your b
 
 Only `ANTHROPIC_API_KEY` is required. `backend/.env.example` documents the optional
 ones: `ALLOWED_ORIGINS` (needed only to run the frontend cross-origin),
-`SCREEN_RATE_LIMIT_PER_MINUTE` and `SCREEN_RATE_LIMIT_PER_HOUR`. The frontend also
+`SCREEN_RATE_LIMIT_PER_MINUTE`, `SCREEN_RATE_LIMIT_PER_HOUR`, and
+`TRUST_PROXY_HEADERS` (only if you deploy behind your own proxy; it is automatic
+on Vercel). The frontend also
 accepts `VITE_SCREEN_ENDPOINT` to point at a backend somewhere other than `/api/screen`.
 
 ## Tests
 
 ```bash
 cd backend
-pytest             # 64 offline tests: schema, priority table, /screen route,
+pytest             # 67 offline tests: schema, priority table, /screen route,
                    # retry loop, status codes, rate limiter. No network, no cost,
                    # no API key needed.
 pytest --eval      # additionally screens the 14-posting corpus against the live

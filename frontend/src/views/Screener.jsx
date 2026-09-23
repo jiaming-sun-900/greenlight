@@ -114,7 +114,7 @@ export default function Screener({ nav, screening, onAddToTracker }) {
               onDismissError={dismissError}
             />
           ) : error ? (
-            <ErrorState message={error} />
+            <ErrorState error={error} />
           ) : (
             <EmptyState />
           )}
@@ -163,7 +163,7 @@ function ResultView({ draft, onChange, onAdd, error, onDismissError }) {
             >
               <p className="text-body text-bad-fg">
                 <span className="font-semibold">That retry failed.</span>{" "}
-                {error}
+                {error.message}
               </p>
               <button
                 type="button"
@@ -253,20 +253,26 @@ function LoadingState() {
   );
 }
 
-function ErrorState({ message }) {
-  // "Check that the backend is running" is wrong advice for a rate limit, which
-  // is the failure a user is most likely to meet, so the hint follows the cause.
-  const throttled = /too many/i.test(message);
+const HINTS = {
+  throttled: "Give it a minute, then press Analyze again.",
+  timeout: "The backend may be waking up. Press Analyze to try again.",
+  "too-long": "Trim the posting down and press Analyze again.",
+  failed: "Check that the backend is running, then press Analyze again.",
+};
+
+function ErrorState({ error }) {
+  // The hint follows the cause, which is carried on the error rather than
+  // inferred from its wording.
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-5 py-16 text-center">
       <div className="rounded-full bg-bad-bg px-3.5 py-1.5 text-body font-semibold text-bad-fg">
         Analysis failed
       </div>
-      <p className="max-w-sm text-body leading-relaxed text-muted">{message}</p>
+      <p className="max-w-sm text-body leading-relaxed text-muted">
+        {error.message}
+      </p>
       <p className="text-label text-muted">
-        {throttled
-          ? "Give it a minute, then press Analyze again."
-          : "Check that the backend is running, then press Analyze again."}
+        {HINTS[error.kind] ?? HINTS.failed}
       </p>
     </div>
   );

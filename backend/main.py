@@ -12,6 +12,7 @@ import anthropic
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 load_dotenv()
@@ -55,13 +56,42 @@ if _allowed_origins:
 MAX_JOB_DESCRIPTION_CHARS = 20_000
 
 
+# Content-Length past this is refused by the middleware below, before the body is
+# read. Generous next to the real character cap because JSON escaping and
+# multi-byte characters both inflate the encoded size.
+MAX_REQUEST_BYTES = MAX_JOB_DESCRIPTION_CHARS * 8
+
+
 class ScreenRequest(BaseModel):
     # The real cap is enforced in screen(), not here. A pydantic max_length failure
     # comes back as FastAPI's 422, whose detail is a list of dicts rather than a
-    # string, and the frontend renders that as "[object Object]". This field guard is
-    # deliberately far looser than the real limit: it exists only so a multi-megabyte
-    # body is thrown out during parsing instead of being copied around first.
+    # string, and the frontend renders that as "[object Object]". This field guard
+    # is a backstop for a body that arrives without a Content-Length to check.
     job_description: str = Field(max_length=MAX_JOB_DESCRIPTION_CHARS * 50)
+
+
+@app.middleware("http")
+async def _reject_oversized_bodies(request: Request, call_next):
+    """Refuse a huge body before anything reads it.
+
+    A field-level max_length is not protection: by the time pydantic sees the
+    string, Starlette has already buffered the whole body and json.loads has
+    already built it in memory, so a 500MB request is an out-of-memory event on
+    a serverless function rather than a rejection. Content-Length is available
+    before any of that happens.
+    """
+    raw = request.headers.get("content-length")
+    if raw and raw.isdigit() and int(raw) > MAX_REQUEST_BYTES:
+        return JSONResponse(
+            status_code=413,
+            content={
+                "detail": (
+                    f"That request body is too large. The limit is "
+                    f"{MAX_JOB_DESCRIPTION_CHARS:,} characters."
+                )
+            },
+        )
+    return await call_next(request)
 
 
 SYSTEM_PROMPT = """You are a visa-eligibility screener for international students on F-1 visas. \
@@ -293,7 +323,7 @@ class ScreenResult(BaseModel):
 
     verdict: Literal["green", "yellow", "red"]
     role_term: Literal["internship_or_temporary", "ongoing"] = "ongoing"
-    # Filled in by _set_priority below; anything the model sends is overwritten.
+    # Filled in by _set_priority below; anything the model sends is discarded.
     priority: Literal["A", "B", "C", "D"] = "C"
     verdict_reasons: list[VerdictReason] = Field(min_length=1)
     position_title: str = ""
@@ -301,6 +331,18 @@ class ScreenResult(BaseModel):
     job_functions: str = ""
     preferred_skills: list[str] = Field(default_factory=list)
     deadline: str | None = None
+
+    @field_validator("priority", mode="before")
+    @classmethod
+    def _discard_model_priority(cls, _value: object) -> str:
+        """Throw away whatever arrived and let _set_priority derive it.
+
+        The field is a Literal, so a model that volunteers "priority": "high"
+        would fail validation, cost a retry, and possibly a 502, over a value
+        that is overwritten two validators later. The prompt does not ask for
+        this field; the point is that it cannot hurt if the model sends it.
+        """
+        return "C"
 
     @field_validator("deadline", mode="before")
     @classmethod
@@ -494,6 +536,16 @@ _SWEEP_INTERVAL_SECONDS = 60.0
 _last_sweep = 0.0
 
 
+# Forwarding headers are only worth reading when something in front of this
+# process is known to overwrite them. On Vercel that is the edge, which sets
+# VERCEL in the environment. Anywhere else the operator has to say so, because a
+# directly exposed uvicorn will happily repeat whatever the caller invented and
+# every request lands in a bucket of its own.
+TRUST_PROXY_HEADERS = bool(os.getenv("VERCEL")) or os.getenv(
+    "TRUST_PROXY_HEADERS", ""
+).strip().lower() in {"1", "true", "yes"}
+
+
 def _client_ip(request: Request) -> str:
     """Best-effort client address, preferring the headers a caller cannot forge.
 
@@ -502,9 +554,11 @@ def _client_ip(request: Request) -> str:
     leftmost token is the attacker's own choice of rate-limit bucket. Vercel's
     x-vercel-forwarded-for and x-real-ip are both set at the edge and overwrite
     anything inbound, so they come first; failing those, the rightmost
-    x-forwarded-for entry is the closest thing to the real peer. Running under bare
-    uvicorn there are no proxy headers at all and request.client is the truth.
+    x-forwarded-for entry is the closest thing to the real peer. With no trusted
+    proxy in front, none of them are read at all and the socket peer is the truth.
     """
+    if not TRUST_PROXY_HEADERS:
+        return request.client.host if request.client else "unknown"
     for header in ("x-vercel-forwarded-for", "x-real-ip"):
         value = (request.headers.get(header) or "").strip()
         if value:

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import DeadlineBadge from "./DeadlineBadge.jsx";
 import PriorityChip from "./PriorityChip.jsx";
@@ -63,6 +63,18 @@ export default function JobCard({ card, onOpen, highlighted = false }) {
   });
   const node = useRef(null);
 
+  // Memoised: an inline arrow is a new ref identity on every render, and this
+  // component re-renders on every frame of a drag, so dnd-kit's node would be
+  // detached and reattached (called with null, then the element) each frame
+  // while its measuring code is reading it.
+  const attach = useCallback(
+    (el) => {
+      node.current = el;
+      setNodeRef(el);
+    },
+    [setNodeRef]
+  );
+
   // Under the default priority sort a freshly added C or D card lands at the
   // bottom of a long column, so the ring meant to point it out animates
   // entirely off screen.
@@ -77,10 +89,7 @@ export default function JobCard({ card, onOpen, highlighted = false }) {
   return (
     <CardFace
       card={card}
-      ref={(el) => {
-        node.current = el;
-        setNodeRef(el);
-      }}
+      ref={attach}
       // Drag with the pointer; open with click or Enter. `touch-manipulation`
       // rather than `touch-none`: the touch sensor activates on a hold, so a
       // plain swipe still has to reach the column underneath and scroll it.

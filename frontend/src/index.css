@@ -27,7 +27,6 @@
      `accent` (emerald 600, dark enough for white text), status dots and the
      brand mark use `accent-dot`, tinted surfaces use `accent-soft`. */
   --color-accent: #059669;
-  --color-accent-hover: #047857;
   /* The body of a solid accent button. Deliberately deeper than the brand
      green: white on #059669 is 3.77:1, under the 4.5:1 WCAG AA bar for 16px
      text, and this is the colour under the label of every primary action in
@@ -79,8 +78,9 @@
   --color-selected: #ded9cb;
 
   /* Status dots and the 4px rule down a card's left edge. Deeper than the
-     pastel fills, which are almost invisible as a rule. */
-  --color-dot-green: #10b981;
+     pastel fills, which are almost invisible as a rule. Green has no `dot-`
+     entry on purpose: it is `accent-dot`, the brand green, and a second green
+     token here would be a near-match nobody could tell apart at 8px. */
   --color-dot-yellow: #eab308;
   --color-dot-red: #ef4444;
   --color-edge-green: #6ee7b7;
@@ -103,10 +103,6 @@
   --color-track-rim: rgb(255 255 255 / 0.55);
 
   --font-sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  /* Display only. Everything at `text-title` and below stays on Inter: a serif
-     at 12 to 14px goes mushy in the chips and the counts, and its figures are
-     not tabular, which the column counts and the char count rely on. */
-  --font-display: Newsreader, Georgia, "Times New Roman", serif;
 
   /* Font size hierarchy (see CLAUDE.md > Typography scale).
      Five tiers only. Use these tokens instead of ad hoc text-xs / text-sm /
@@ -237,16 +233,6 @@
   transition:
     opacity var(--theme-fade) var(--theme-ease),
     transform var(--theme-fade) var(--theme-ease);
-}
-
-/* The serif that carries a view's h1. Newsreader is optical-size aware, so the
-   axis is set to roughly the size this actually renders at; left at the text
-   master the strokes thin out and the title reads underweight next to Inter.
-   The slight negative tracking matches `text-display`'s own. */
-@utility display-serif {
-  font-family: var(--font-display);
-  font-variation-settings: "opsz" 36;
-  letter-spacing: -0.015em;
 }
 
 /* Decorative glyph sizing (emoji, symbol characters). */

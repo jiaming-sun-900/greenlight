@@ -32,7 +32,7 @@ export const PRIORITY_META = {
   C: {
     label: "Low signal",
     blurb: "Nothing to go on, or a role with a known end date.",
-    chip: "bg-neutral-bg text-ink",
+    chip: "bg-neutral-bg text-neutral-fg",
   },
   D: {
     label: "Skip",

@@ -56,7 +56,9 @@ export default function App() {
     // `md` both views stack and the page scrolls as one, which is why the
     // title row inside each view is sticky.
     <div className="flex min-h-dvh flex-col bg-bg text-text md:h-dvh md:overflow-hidden">
-      <main className="flex flex-1 flex-col md:min-h-0">
+      {/* tabIndex so a dialog closing over a deleted card has somewhere to
+          put focus back. */}
+      <main tabIndex={-1} className="flex flex-1 flex-col outline-none md:min-h-0">
         {activeTab === "screener" ? (
           <Screener
             nav={nav}

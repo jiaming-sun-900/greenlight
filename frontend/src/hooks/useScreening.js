@@ -43,6 +43,11 @@ function toDraft(data) {
  * stringifying that yields "[object Object]", so anything that is not already a
  * string has to be unpacked.
  */
+/** Error shape the view renders: the text to show plus why it happened. */
+function failure(message, kind) {
+  return { message, kind };
+}
+
 function messageFrom(body, status) {
   const fallback = `Request failed (${status}).`;
   const detail = body?.detail;
@@ -80,7 +85,10 @@ export default function useScreening() {
     if (!text) return;
     if (text.length > MAX_JOB_DESCRIPTION_CHARS) {
       setError(
-        `This posting is ${text.length.toLocaleString()} characters. The limit is ${MAX_JOB_DESCRIPTION_CHARS.toLocaleString()}, so trim it and try again.`
+        failure(
+          `This posting is ${text.length.toLocaleString()} characters. The limit is ${MAX_JOB_DESCRIPTION_CHARS.toLocaleString()}, so trim it and try again.`,
+          "too-long"
+        )
       );
       return;
     }
@@ -108,7 +116,9 @@ export default function useScreening() {
         } catch {
           // No JSON body: fall back to the status-based message.
         }
-        throw new Error(messageFrom(body, response.status));
+        const err = new Error(messageFrom(body, response.status));
+        err.status = response.status;
+        throw err;
       }
 
       setDraft(toDraft(await response.json()));
@@ -118,17 +128,30 @@ export default function useScreening() {
         // timeout fired and the user is owed an explanation; if it is not, they
         // pressed Cancel or started a new analysis, and both already said so.
         if (inFlight.current === controller) {
-          setError("That took too long. The backend did not answer in time.");
+          setError(
+            failure(
+              "That took too long. The backend did not answer in time.",
+              "timeout"
+            )
+          );
         }
         return;
       }
       // A failed retry must not discard an analysis the user already has, and
       // may already have corrected by hand, so `draft` is deliberately left
       // alone here.
+      // The kind comes off the status code, not off the wording. Matching the
+      // prose meant an upstream 429 ("The screening service is busy") missed
+      // the throttle branch and told the user to check that the backend was
+      // running, which is the exact advice that branch exists to avoid.
+      const status = err?.status;
       setError(
-        err instanceof Error && err.message
-          ? err.message
-          : "Something went wrong while analyzing this posting."
+        failure(
+          err instanceof Error && err.message
+            ? err.message
+            : "Something went wrong while analyzing this posting.",
+          status === 429 ? "throttled" : status === 504 ? "timeout" : "failed"
+        )
       );
     } finally {
       clearTimeout(timer);

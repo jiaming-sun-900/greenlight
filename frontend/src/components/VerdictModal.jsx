@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import VerdictBadge from "./VerdictBadge.jsx";
 import CloseGlyph from "./CloseGlyph.jsx";
 import useDialog from "../hooks/useDialog.js";
@@ -112,12 +112,18 @@ function labelForTag(tag) {
 
 function RecruiterAsk() {
   const [copied, setCopied] = useState(false);
+  const timer = useRef(null);
+
+  // Escape within the two seconds unmounts this while the timer is still
+  // pending, leaving it holding the component's setState.
+  useEffect(() => () => clearTimeout(timer.current), []);
 
   async function copy() {
     try {
       await navigator.clipboard.writeText(RECRUITER_SCRIPT);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       // Clipboard blocked (insecure context or denied permission): the text is
       // on screen and selectable, so there is nothing to recover from.

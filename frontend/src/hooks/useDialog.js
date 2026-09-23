@@ -46,8 +46,17 @@ export default function useDialog({ onClose, onEscape, active = true } = {}) {
 
     return () => {
       document.body.style.overflow = overflow;
-      if (previouslyFocused instanceof HTMLElement) {
+      // The element that opened the dialog may be gone by the time it closes:
+      // deleting a card removes the very card that was focused. Focusing a
+      // detached node is a silent no-op that drops focus to <body>, so the next
+      // Tab restarts from the top of the page.
+      if (
+        previouslyFocused instanceof HTMLElement &&
+        document.contains(previouslyFocused)
+      ) {
         previouslyFocused.focus({ preventScroll: true });
+      } else {
+        document.querySelector("main")?.focus?.({ preventScroll: true });
       }
     };
   }, []);
@@ -72,6 +81,14 @@ export default function useDialog({ onClose, onEscape, active = true } = {}) {
       }
       const first = targets[0];
       const last = targets[targets.length - 1];
+      // Focus can already be outside the dialog: clicking the padding inside
+      // the backdrop puts it on <body>, which is neither first nor last, and
+      // without this the next Tab walks into the page behind the overlay.
+      if (!dialog.contains(document.activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+        return;
+      }
       if (!event.shiftKey && document.activeElement === last) {
         event.preventDefault();
         first.focus();

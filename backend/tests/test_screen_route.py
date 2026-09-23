@@ -159,15 +159,55 @@ class TestInputValidation:
 
         assert response.status_code == 200
 
-    def test_a_multi_megabyte_body_is_rejected_by_the_schema(self, client, monkeypatch):
+    def test_a_multi_megabyte_body_is_refused_before_it_is_read(
+        self, client, monkeypatch
+    ):
+        """413 from the middleware, not 422 from the schema.
+
+        A field-level max_length only fires after Starlette has buffered the
+        whole body and json.loads has built it in memory, which on a serverless
+        function is an out-of-memory event rather than a rejection.
+        """
         calls = stub_model(monkeypatch, json.dumps(VALID_RESULT))
         response = client.post("/screen", json={"job_description": "x" * 2_000_000})
 
-        assert response.status_code == 422
+        assert response.status_code == 413
+        assert isinstance(response.json()["detail"], str)
         assert calls == []
 
 
+@pytest.fixture
+def trusted_proxy(monkeypatch):
+    """Behave as if something in front of this process rewrites the headers.
+
+    Off by default now, so a directly exposed process cannot be told its own
+    client address by the caller. Every test that distinguishes clients by
+    header has to opt in, which is the point.
+    """
+    monkeypatch.setattr(main, "TRUST_PROXY_HEADERS", True)
+
+
 class TestRateLimiting:
+    def test_forwarding_headers_are_ignored_without_a_trusted_proxy(
+        self, client, monkeypatch
+    ):
+        """The default. Rotating a header must not buy a fresh quota when there
+        is no proxy known to overwrite it."""
+        monkeypatch.setattr(main, "TRUST_PROXY_HEADERS", False)
+        monkeypatch.setattr(main, "RATE_LIMIT_PER_MINUTE", 3)
+        monkeypatch.setattr(main, "RATE_LIMIT_PER_HOUR", 0)
+        stub_model(monkeypatch, json.dumps(VALID_RESULT))
+
+        codes = [
+            client.post(
+                "/screen",
+                json={"job_description": POSTING},
+                headers={"x-real-ip": f"198.51.100.{i}"},
+            ).status_code
+            for i in range(5)
+        ]
+        assert codes == [200, 200, 200, 429, 429]
+        assert len(main._request_log) == 1
     def test_the_limit_returns_429_with_retry_after(self, client, monkeypatch):
         monkeypatch.setattr(main, "RATE_LIMIT_PER_MINUTE", 3)
         monkeypatch.setattr(main, "RATE_LIMIT_PER_HOUR", 0)
@@ -184,7 +224,7 @@ class TestRateLimiting:
         assert int(blocked.headers["retry-after"]) >= 1
         assert isinstance(blocked.json()["detail"], str)
 
-    def test_rotating_x_forwarded_for_does_not_buy_a_fresh_quota(self, client, monkeypatch):
+    def test_rotating_x_forwarded_for_does_not_buy_a_fresh_quota(self, client, monkeypatch, trusted_proxy):
         # A proxy appends the address it actually saw, so the rightmost entry is the
         # real peer and everything to its left is whatever the caller chose to send.
         monkeypatch.setattr(main, "RATE_LIMIT_PER_MINUTE", 2)
@@ -201,7 +241,7 @@ class TestRateLimiting:
         ]
         assert codes == [200, 200, 429, 429]
 
-    def test_a_forged_header_cannot_outvote_the_edge_header(self, client, monkeypatch):
+    def test_a_forged_header_cannot_outvote_the_edge_header(self, client, monkeypatch, trusted_proxy):
         monkeypatch.setattr(main, "RATE_LIMIT_PER_MINUTE", 2)
         monkeypatch.setattr(main, "RATE_LIMIT_PER_HOUR", 0)
         stub_model(monkeypatch, json.dumps(VALID_RESULT))
@@ -219,7 +259,7 @@ class TestRateLimiting:
         ]
         assert codes == [200, 200, 429]
 
-    def test_separate_clients_keep_separate_quotas(self, client, monkeypatch):
+    def test_separate_clients_keep_separate_quotas(self, client, monkeypatch, trusted_proxy):
         monkeypatch.setattr(main, "RATE_LIMIT_PER_MINUTE", 1)
         monkeypatch.setattr(main, "RATE_LIMIT_PER_HOUR", 0)
         stub_model(monkeypatch, json.dumps(VALID_RESULT))
@@ -236,7 +276,7 @@ class TestRateLimiting:
         )
         assert (first.status_code, second.status_code) == (200, 200)
 
-    def test_the_tracked_ip_count_is_capped(self, client, monkeypatch):
+    def test_the_tracked_ip_count_is_capped(self, client, monkeypatch, trusted_proxy):
         monkeypatch.setattr(main, "MAX_TRACKED_IPS", 5)
         stub_model(monkeypatch, json.dumps(VALID_RESULT))
 
@@ -250,7 +290,7 @@ class TestRateLimiting:
         # current caller leaves the log permanently one entry over.
         assert len(main._request_log) == main.MAX_TRACKED_IPS
 
-    def test_eviction_drops_the_least_recently_seen_address(self, client, monkeypatch):
+    def test_eviction_drops_the_least_recently_seen_address(self, client, monkeypatch, trusted_proxy):
         """A caller who is still active must not be evicted by newer arrivals."""
         monkeypatch.setattr(main, "MAX_TRACKED_IPS", 3)
         stub_model(monkeypatch, json.dumps(VALID_RESULT))

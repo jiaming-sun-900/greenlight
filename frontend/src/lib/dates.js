@@ -48,15 +48,20 @@ export function toISODate(value) {
   // midnight. An impossible date is dropped rather than rolled over.
   if (isoParts(raw)) return isISODate(raw) ? raw : "";
 
-  // A UTC-suffixed timestamp names a calendar day in UTC, so read its parts in
-  // UTC too. Reading them locally lands a day early anywhere west of Greenwich.
   const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) return "";
-  const utc = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw);
+  // Anything the spec says is parsed as UTC has to be read back in UTC, or it
+  // lands a day early west of Greenwich. That covers an explicit Z or offset,
+  // and also the ISO date-only forms ("2026-10", "2026") which the Date
+  // constructor treats as UTC midnight even though they carry no zone.
+  const utc =
+    /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw) || /^\d{4}(-\d{2})?$/.test(raw);
   const year = utc ? parsed.getUTCFullYear() : parsed.getFullYear();
   const month = (utc ? parsed.getUTCMonth() : parsed.getMonth()) + 1;
   const day = utc ? parsed.getUTCDate() : parsed.getDate();
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  // Four digits, always: a year under 1000 would otherwise emit "999-01-01",
+  // which the ISO check rejects on the next pass and the deadline disappears.
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 /** Whole days from today until the deadline. Negative means past. null if no deadline. */
