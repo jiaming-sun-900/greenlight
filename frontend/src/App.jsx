@@ -3,6 +3,7 @@ import Screener from "./views/Screener.jsx";
 import Tracker from "./views/Tracker.jsx";
 import useCards from "./hooks/useCards.js";
 import useScreening from "./hooks/useScreening.js";
+import useTheme from "./hooks/useTheme.js";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("screener");
@@ -16,6 +17,7 @@ export default function App() {
   // pasted posting and a hand-corrected analysis must survive a trip to the
   // tracker and back.
   const screening = useScreening();
+  const { isDark, toggle: onToggleTheme } = useTheme();
 
   const handleAddToTracker = useCallback(
     (draft) => {
@@ -34,6 +36,8 @@ export default function App() {
     activeTab,
     onTabChange: setActiveTab,
     trackedCount: cards.length,
+    isDark,
+    onToggleTheme,
   };
 
   return (

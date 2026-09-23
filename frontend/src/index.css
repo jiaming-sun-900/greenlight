@@ -1,23 +1,85 @@
 @import "tailwindcss";
 
+/* Dark mode is a class on <html>, not a media query, because the user can
+   override the system preference and that choice is remembered. See
+   hooks/useTheme.js and the no-flash script in index.html. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
-  --color-bg: #fafafa;
-  --color-text: #111111;
+  /* ---- Surfaces ----------------------------------------------------------
+     Semantic, not literal. Nothing in the app names `white` or a `gray-N`
+     shade directly: every surface goes through one of these, which is what
+     lets the whole palette flip under `.dark` in one place. See CLAUDE.md >
+     Surfaces and dark mode. */
+  --color-bg: #fafafa; /* the page behind everything */
+  --color-surface: #ffffff; /* panels, columns, cards, modals */
+  --color-sunken: #f9fafb; /* a box inset into a surface */
+  --color-border: #e5e7eb; /* the edge of a surface */
+  --color-border-soft: #f3f4f6; /* a divider inside a surface */
+  --color-hover: #f3f4f6; /* hover fill on a quiet control */
+  --color-overlay: rgb(0 0 0 / 0.4); /* modal backdrop */
+
   /* One green across the app: the Greenlight emerald. Solid fills use
      `accent` (emerald 600, dark enough for white text), status dots and the
      brand mark use `accent-dot`, tinted surfaces use `accent-soft`. */
   --color-accent: #059669;
   --color-accent-hover: #047857;
+  /* The gradient a solid accent button is filled with. One step darker than
+     the brand green on purpose: white on #059669 is 3.77:1, under the 4.5:1
+     WCAG AA bar for 16px text, and that green carries the label of every
+     primary action in the app. These two stops run 5.5:1 to 7.7:1. The brand
+     green itself is unchanged and still owns dots, rings, and borders. */
+  --color-accent-fill-top: #047857;
+  --color-accent-fill-bottom: #065f46;
   --color-accent-dot: #10b981;
   --color-accent-soft: #d1fae5;
   /* Halo color for pressed accent buttons. Lighter than the fill on purpose:
      it never sits under text, so it is free to be the softer emerald. */
   --color-accent-glow: #10b981;
+  --color-focus: #059669;
+
   /* Two text grays, no more (see CLAUDE.md > Text color). `ink` is body copy
      and anything a reader parses word by word; `muted` is passive metadata.
-     Headings keep `--color-text`. Nothing here is pure black. */
+     Headings keep `--color-text`. Nothing here is pure black or pure white. */
+  --color-text: #111111;
   --color-ink: #1f2937;
   --color-muted: #4b5563;
+
+  /* ---- Status pairs ------------------------------------------------------
+     Each is a fill plus the only foreground that is guaranteed readable on
+     it, in both themes. Never mix a fill from one pair with a foreground
+     from another. */
+  --color-good-bg: #d1fae5;
+  --color-good-fg: #064e3b;
+  --color-warn-bg: #fef9c3;
+  --color-warn-fg: #713f12;
+  --color-bad-bg: #fee2e2;
+  --color-bad-fg: #7f1d1d;
+  --color-urgent-bg: #ffedd5;
+  --color-urgent-fg: #9a3412;
+  --color-neutral-bg: #f3f4f6;
+  --color-neutral-fg: #1f2937;
+  /* One step stronger than `hover`, for a control that is selected rather
+     than merely pointed at. */
+  --color-selected: #e5e7eb;
+
+  /* Status dots and the 4px rule down a card's left edge. Deeper than the
+     pastel fills, which are almost invisible as a rule. */
+  --color-dot-green: #10b981;
+  --color-dot-yellow: #eab308;
+  --color-dot-red: #ef4444;
+  --color-edge-green: #6ee7b7;
+  --color-edge-yellow: #fde047;
+  --color-edge-red: #fca5a5;
+
+  /* Destructive actions. `danger` is the text/outline colour and flips with
+     the theme; `danger-fill` is the solid confirm button and does not, since
+     white has to stay readable on it either way. */
+  --color-danger: #dc2626;
+  --color-danger-fill: #dc2626;
+  --color-danger-fill-hover: #b91c1c;
+  --color-danger-soft: #fef2f2;
+
   --font-sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
   /* Font size hierarchy (see CLAUDE.md > Typography scale).
@@ -41,6 +103,55 @@
   --icon-lg: 40px;
 }
 
+/* ---- Dark theme -----------------------------------------------------------
+   Only the tokens above are redefined. No component opts into dark mode, and
+   there is no `dark:` utility anywhere in the app: if a surface is named
+   semantically it flips for free, and if it is not, that is the bug.
+
+   The greys are blue-leaning rather than neutral, which reads as a deliberate
+   surface rather than as a screen that failed to light up, and nothing is pure
+   black: #000 against light text vibrates at these sizes. */
+.dark {
+  --color-bg: #0e1014;
+  --color-surface: #161a20;
+  --color-sunken: #1d222a;
+  --color-border: #2b313c;
+  --color-border-soft: #212730;
+  --color-hover: #242b36;
+  --color-overlay: rgb(0 0 0 / 0.65);
+
+  /* The fill stays the brand emerald so the primary button is the same object
+     in both themes. Only the halo and the focus ring brighten, because both
+     sit on a dark page where emerald 600 alone barely separates from it. */
+  --color-accent-soft: #0c3b2e;
+  --color-focus: #10b981;
+
+  --color-text: #f4f6f8;
+  --color-ink: #d5dae2;
+  --color-muted: #98a2b3;
+
+  --color-good-bg: #0c3b2e;
+  --color-good-fg: #6ee7b7;
+  --color-warn-bg: #3b3210;
+  --color-warn-fg: #fde047;
+  --color-bad-bg: #451a1a;
+  --color-bad-fg: #fca5a5;
+  --color-urgent-bg: #43260f;
+  --color-urgent-fg: #fdba74;
+  --color-neutral-bg: #242b36;
+  --color-neutral-fg: #d5dae2;
+  --color-selected: #333b49;
+
+  --color-dot-yellow: #facc15;
+  --color-dot-red: #f87171;
+  --color-edge-green: #10b981;
+  --color-edge-yellow: #eab308;
+  --color-edge-red: #ef4444;
+
+  --color-danger: #f87171;
+  --color-danger-soft: #3b1a1a;
+}
+
 /* Decorative glyph sizing (emoji, symbol characters). */
 @utility icon-lg {
   font-size: var(--icon-lg);
@@ -51,6 +162,16 @@ html,
 body,
 #root {
   height: 100%;
+}
+
+html {
+  color-scheme: light;
+}
+
+.dark {
+  /* Gives the browser's own chrome the memo: scrollbars, form controls, and
+     the <input type="date"> picker all follow this rather than staying white. */
+  color-scheme: dark;
 }
 
 body {
@@ -65,7 +186,7 @@ body {
    every button in the app except a job card. */
 @utility focus-ring {
   &:focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--color-focus);
     outline-offset: 2px;
   }
 }
@@ -98,8 +219,8 @@ body {
 @utility btn-accent {
   background-image: linear-gradient(
     to bottom,
-    var(--color-accent),
-    var(--color-accent-hover)
+    var(--color-accent-fill-top),
+    var(--color-accent-fill-bottom)
   );
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.22),
@@ -135,7 +256,7 @@ body {
     background-image: none;
     box-shadow: none;
     filter: none;
-    background-color: #e5e7eb;
+    background-color: var(--color-neutral-bg);
     color: var(--color-muted);
     cursor: not-allowed;
   }
@@ -144,17 +265,35 @@ body {
 /* View toggle. The track is a shallow well and the pill a raised cap: the same
    gradient + inset language as the buttons, one notch quieter. */
 @utility toggle-track {
-  background-image: linear-gradient(to bottom, #e6e8ec, #f5f6f8);
+  background-image: linear-gradient(
+    to bottom,
+    var(--color-track-top),
+    var(--color-track-bottom)
+  );
   box-shadow:
     inset 0 1px 2px rgb(17 24 39 / 0.1),
-    inset 0 -1px 0 rgb(255 255 255 / 0.8);
+    inset 0 -1px 0 var(--color-track-lip);
+}
+
+@theme {
+  --color-track-top: #e6e8ec;
+  --color-track-bottom: #f5f6f8;
+  --color-track-lip: rgb(255 255 255 / 0.8);
+}
+
+.dark {
+  /* The well inverts: on a dark page a recess is darker than its surround, not
+     lighter, and the lip that catches the light moves to a faint white. */
+  --color-track-top: #0b0d11;
+  --color-track-bottom: #1a1f27;
+  --color-track-lip: rgb(255 255 255 / 0.06);
 }
 
 @utility toggle-pill {
   background-image: linear-gradient(
     to bottom,
-    var(--color-accent),
-    var(--color-accent-hover)
+    var(--color-accent-fill-top),
+    var(--color-accent-fill-bottom)
   );
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.25),

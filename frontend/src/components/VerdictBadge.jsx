@@ -3,19 +3,19 @@ const VERDICT_STYLES = {
     label: "Greenlight",
     dot: "bg-accent-dot",
     bg: "bg-accent-soft",
-    text: "text-emerald-900",
+    text: "text-good-fg",
   },
   yellow: {
     label: "Yellow",
-    dot: "bg-yellow-500",
-    bg: "bg-[#fef9c3]",
-    text: "text-yellow-900",
+    dot: "bg-dot-yellow",
+    bg: "bg-warn-bg",
+    text: "text-warn-fg",
   },
   red: {
     label: "Red",
-    dot: "bg-red-500",
-    bg: "bg-[#fee2e2]",
-    text: "text-red-900",
+    dot: "bg-dot-red",
+    bg: "bg-bad-bg",
+    text: "text-bad-fg",
   },
 };
 

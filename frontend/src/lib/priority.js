@@ -22,22 +22,22 @@ export const PRIORITY_META = {
   A: {
     label: "Apply",
     blurb: "Both questions answered. Spend an application here.",
-    chip: "bg-accent-soft text-emerald-900",
+    chip: "bg-good-bg text-good-fg",
   },
   B: {
     label: "Ask first",
     blurb: "A real signal, and one question would resolve it.",
-    chip: "bg-[#fef9c3] text-yellow-900",
+    chip: "bg-warn-bg text-warn-fg",
   },
   C: {
     label: "Low signal",
     blurb: "Nothing to go on, or a role with a known end date.",
-    chip: "bg-gray-100 text-ink",
+    chip: "bg-neutral-bg text-ink",
   },
   D: {
     label: "Skip",
     blurb: "Excluded outright. Your application is better spent elsewhere.",
-    chip: "bg-[#fee2e2] text-red-900",
+    chip: "bg-bad-bg text-bad-fg",
   },
 };
 

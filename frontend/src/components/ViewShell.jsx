@@ -1,3 +1,4 @@
+import ThemeToggle from "./ThemeToggle.jsx";
 import ViewToggle from "./ViewToggle.jsx";
 
 // One container for both views. When the screener and the tracker each carried
@@ -18,6 +19,7 @@ const BLEED = "-mx-4 px-4 sm:-mx-6 sm:px-6 xl:-mx-10 xl:px-10";
  * toggle jump 14px vertically between views.
  */
 export default function ViewShell({ title, subtitle, nav, children }) {
+  const { isDark, onToggleTheme, ...tabs } = nav;
   return (
     <div className={PAGE + " flex flex-col pb-6 md:h-full"}>
       {/* Sticky because below `md` the content scrolls as one page: the toggle
@@ -38,7 +40,10 @@ export default function ViewShell({ title, subtitle, nav, children }) {
             </h1>
             <p className="mt-1 text-body text-muted">{subtitle}</p>
           </div>
-          <ViewToggle {...nav} />
+          <div className="flex shrink-0 items-center gap-2">
+            <ViewToggle {...tabs} />
+            <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />
+          </div>
         </div>
       </header>
 

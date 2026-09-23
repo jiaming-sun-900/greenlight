@@ -24,19 +24,19 @@ export default function DeadlineBadge({ deadline }) {
   if (days === null) return null;
 
   if (days < 0) {
-    return <Chip className="bg-gray-100 text-muted">Closed</Chip>;
+    return <Chip className="bg-neutral-bg text-muted">Closed</Chip>;
   }
   if (days === 0) {
-    return <Chip className="bg-orange-100 text-orange-800">Due today</Chip>;
+    return <Chip className="bg-urgent-bg text-urgent-fg">Due today</Chip>;
   }
   if (days <= 3) {
     return (
-      <Chip className="bg-orange-100 text-orange-800">
+      <Chip className="bg-urgent-bg text-urgent-fg">
         {days} day{days === 1 ? "" : "s"} left
       </Chip>
     );
   }
   return (
-    <Chip className="bg-gray-50 text-muted">{formatDeadline(deadline)}</Chip>
+    <Chip className="bg-sunken text-muted">{formatDeadline(deadline)}</Chip>
   );
 }

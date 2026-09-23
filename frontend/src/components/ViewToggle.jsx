@@ -23,7 +23,7 @@ export default function ViewToggle({ activeTab, onTabChange, trackedCount = 0 })
     // lets the pill travel by a plain 100% translate.
     <nav
       aria-label="View"
-      className="group relative grid shrink-0 grid-cols-2 justify-items-center toggle-track rounded-full border border-gray-200 p-1"
+      className="group relative grid shrink-0 grid-cols-2 justify-items-center toggle-track rounded-full border border-border p-1"
     >
       <span
         aria-hidden
@@ -52,7 +52,7 @@ export default function ViewToggle({ activeTab, onTabChange, trackedCount = 0 })
                 aria-label={`${trackedCount} tracked`}
                 className={
                   "rounded-full px-1.5 py-0.5 text-micro tabular-nums transition-colors " +
-                  (isActive ? "bg-white/25 text-white" : "bg-gray-200 text-ink")
+                  (isActive ? "bg-white/25 text-white" : "bg-selected text-ink")
                 }
               >
                 {trackedCount}

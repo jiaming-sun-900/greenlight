@@ -4,7 +4,27 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0e1014" media="(prefers-color-scheme: dark)" />
     <title>Greenlight</title>
+    <script>
+      // Runs before first paint so a dark-mode user never sees a white flash on
+      // the way to their theme. React cannot do this: by the time it mounts the
+      // page has already painted. Kept in sync by src/hooks/useTheme.js, which
+      // owns the same storage key.
+      (function () {
+        try {
+          var stored = localStorage.getItem("greenlight_theme");
+          var dark =
+            stored === "dark" ||
+            (stored !== "light" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) document.documentElement.classList.add("dark");
+        } catch (e) {
+          // Storage blocked: fall through to the light default.
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

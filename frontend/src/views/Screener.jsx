@@ -22,9 +22,9 @@ const MEASURE = "w-full max-w-[70ch]";
 const MEASURE_PADDING = "pr-[max(1.25rem,calc(100%-70ch-1.25rem))]";
 
 const PANEL =
-  "flex min-h-0 flex-col rounded-2xl border-2 border-gray-200 bg-white shadow-sm";
+  "flex min-h-0 flex-col rounded-2xl border-2 border-border bg-surface shadow-sm";
 const PANEL_HEADER =
-  "flex shrink-0 items-center justify-between gap-3 border-b-2 border-gray-100 px-5 py-3";
+  "flex shrink-0 items-center justify-between gap-3 border-b-2 border-border-soft px-5 py-3";
 
 export default function Screener({ nav, screening, onAddToTracker }) {
   const {
@@ -64,7 +64,7 @@ export default function Screener({ nav, screening, onAddToTracker }) {
             <span
               className={
                 "text-micro tabular-nums " +
-                (overLimit ? "font-medium text-red-700" : "text-muted")
+                (overLimit ? "font-medium text-danger" : "text-muted")
               }
             >
               {overLimit
@@ -72,7 +72,9 @@ export default function Screener({ nav, screening, onAddToTracker }) {
                 : `${length.toLocaleString()} chars`}
             </span>
           </div>
-          <div className="flex min-h-0 flex-1 rounded-b-2xl bg-white">
+          {/* The ring lives on the wrapper: the textarea is borderless and fills
+              the panel, so its own outline would trace the panel edge. */}
+          <div className="flex min-h-0 flex-1 rounded-b-2xl bg-surface ring-inset focus-within:ring-2 focus-within:ring-focus/50">
             <textarea
               value={jobDescription}
               onChange={(e) => setJobDescription(e.target.value)}
@@ -127,7 +129,7 @@ export default function Screener({ nav, screening, onAddToTracker }) {
           <button
             type="button"
             onClick={cancel}
-            className="btn-block focus-ring rounded-full border-2 border-gray-200 bg-white px-8 text-ink transition-colors hover:bg-gray-50"
+            className="btn-block focus-ring rounded-full border-2 border-border bg-surface px-8 text-ink transition-colors hover:bg-hover"
           >
             Cancel
           </button>
@@ -157,9 +159,9 @@ function ResultView({ draft, onChange, onAdd, error, onDismissError }) {
           {error && (
             <div
               role="alert"
-              className="mb-5 flex items-start justify-between gap-3 rounded-lg bg-[#fee2e2] px-3.5 py-3"
+              className="mb-5 flex items-start justify-between gap-3 rounded-lg bg-bad-bg px-3.5 py-3"
             >
-              <p className="text-body text-red-900">
+              <p className="text-body text-bad-fg">
                 <span className="font-semibold">That retry failed.</span>{" "}
                 {error}
               </p>
@@ -167,7 +169,7 @@ function ResultView({ draft, onChange, onAdd, error, onDismissError }) {
                 type="button"
                 onClick={onDismissError}
                 aria-label="Dismiss"
-                className="focus-ring shrink-0 rounded-md p-1 text-red-900 transition-colors hover:bg-red-900/10"
+                className="focus-ring shrink-0 rounded-md p-1 text-bad-fg transition-colors hover:bg-bad-fg/10"
               >
                 <CloseGlyph />
               </button>
@@ -192,7 +194,7 @@ function ResultView({ draft, onChange, onAdd, error, onDismissError }) {
         </div>
       </div>
 
-      <div className="shrink-0 border-t-2 border-gray-100 px-5 py-4">
+      <div className="shrink-0 border-t-2 border-border-soft px-5 py-4">
         <button
           type="button"
           onClick={onAdd}
@@ -233,17 +235,17 @@ function LoadingState() {
           does not reflow when the result lands. */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="h-9 w-28 animate-pulse rounded-full bg-gray-100" />
-          <div className="h-6 w-20 animate-pulse rounded-full bg-gray-100" />
+          <div className="h-9 w-28 animate-pulse rounded-full bg-hover" />
+          <div className="h-6 w-20 animate-pulse rounded-full bg-hover" />
         </div>
-        <div className="h-3 w-24 animate-pulse rounded bg-gray-100" />
+        <div className="h-3 w-24 animate-pulse rounded bg-hover" />
       </div>
       {[0, 1, 2, 3].map((i) => (
         <div key={i} className="space-y-2">
-          <div className="h-2.5 w-24 animate-pulse rounded bg-gray-100" />
-          <div className="h-3.5 w-full animate-pulse rounded bg-gray-100" />
+          <div className="h-2.5 w-24 animate-pulse rounded bg-hover" />
+          <div className="h-3.5 w-full animate-pulse rounded bg-hover" />
           {i === 2 && (
-            <div className="h-3.5 w-3/4 animate-pulse rounded bg-gray-100" />
+            <div className="h-3.5 w-3/4 animate-pulse rounded bg-hover" />
           )}
         </div>
       ))}
@@ -257,7 +259,7 @@ function ErrorState({ message }) {
   const throttled = /too many/i.test(message);
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-5 py-16 text-center">
-      <div className="rounded-full bg-[#fee2e2] px-3.5 py-1.5 text-body font-semibold text-red-900">
+      <div className="rounded-full bg-bad-bg px-3.5 py-1.5 text-body font-semibold text-bad-fg">
         Analysis failed
       </div>
       <p className="max-w-sm text-body leading-relaxed text-muted">{message}</p>

@@ -25,11 +25,11 @@ function Column({ column, cards, onOpenCard, highlightId }) {
       ref={setNodeRef}
       aria-label={column.label}
       className={
-        "flex min-h-[22rem] w-72 shrink-0 flex-col rounded-2xl border-2 bg-white shadow-sm transition-colors md:min-h-0 " +
-        (isOver ? "border-accent/40" : "border-gray-200")
+        "flex min-h-[22rem] w-72 shrink-0 flex-col rounded-2xl border-2 bg-surface shadow-sm transition-colors md:min-h-0 " +
+        (isOver ? "border-accent/40" : "border-border")
       }
     >
-      <header className="shrink-0 border-b-2 border-gray-100 px-5 py-3">
+      <header className="shrink-0 border-b-2 border-border-soft px-5 py-3">
         <div className="flex items-baseline justify-between gap-2">
           <h2 className="text-title font-semibold text-ink">{column.label}</h2>
           <span className="text-micro tabular-nums text-muted">
@@ -118,8 +118,8 @@ function SortToggle({ value, onChange }) {
               className={
                 "focus-ring rounded-full px-3 py-1 text-label font-medium transition-colors " +
                 (isActive
-                  ? "bg-gray-200 text-ink"
-                  : "text-muted hover:bg-gray-100 hover:text-ink")
+                  ? "bg-selected text-ink"
+                  : "text-muted hover:bg-hover hover:text-ink")
               }
             >
               {sort.label}

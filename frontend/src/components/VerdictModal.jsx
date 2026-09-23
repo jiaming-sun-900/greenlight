@@ -125,13 +125,13 @@ function RecruiterAsk() {
   }
 
   return (
-    <div className="mt-4 rounded-lg border-2 border-gray-100 bg-gray-50 px-3.5 py-3">
+    <div className="mt-4 rounded-lg border-2 border-border-soft bg-sunken px-3.5 py-3">
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="text-body font-medium text-ink">Ask before you invest</h3>
         <button
           type="button"
           onClick={copy}
-          className="focus-ring shrink-0 rounded-md px-2 py-1 text-label font-medium text-muted transition-colors hover:bg-gray-100 hover:text-ink"
+          className="focus-ring shrink-0 rounded-md px-2 py-1 text-label font-medium text-muted transition-colors hover:bg-hover hover:text-ink"
         >
           {copied ? "Copied" : "Copy"}
         </button>
@@ -152,7 +152,7 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay px-4 py-6"
       {...backdropProps}
     >
       {/* `max-h-full` plus an internally scrolling body, matching the card
@@ -165,15 +165,15 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
         role="dialog"
         aria-modal="true"
         aria-label="Why this verdict?"
-        className="flex max-h-full w-full max-w-md flex-col rounded-2xl bg-white shadow-xl focus:outline-none"
+        className="flex max-h-full w-full max-w-md flex-col rounded-2xl bg-surface shadow-xl focus:outline-none"
       >
-        <div className="flex shrink-0 items-center justify-between border-b-2 border-gray-100 px-5 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b-2 border-border-soft px-5 py-4">
           <h2 className="text-title font-semibold text-ink">Why this verdict?</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="focus-ring rounded-md p-1 text-muted transition-colors hover:bg-gray-100 hover:text-ink"
+            className="focus-ring rounded-md p-1 text-muted transition-colors hover:bg-hover hover:text-ink"
           >
             <CloseGlyph />
           </button>
@@ -194,13 +194,13 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
               {list.map((reason, idx) => (
                 <li
                   key={idx}
-                  className="rounded-lg border-2 border-gray-100 bg-gray-50 px-3.5 py-3"
+                  className="rounded-lg border-2 border-border-soft bg-sunken px-3.5 py-3"
                 >
                   <div className="text-body font-medium text-ink">
                     {labelForTag(reason.tag)}
                   </div>
                   {reason.detected_phrase ? (
-                    <blockquote className="mt-1.5 border-l-2 border-gray-200 pl-2.5 text-body italic text-ink">
+                    <blockquote className="mt-1.5 border-l-2 border-border pl-2.5 text-body italic text-ink">
                       “{reason.detected_phrase}”
                     </blockquote>
                   ) : (
@@ -227,7 +227,7 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
           {list.some((reason) => ASK_TAGS.has(reason.tag)) && <RecruiterAsk />}
         </div>
 
-        <div className="shrink-0 border-t-2 border-gray-100 px-5 py-4">
+        <div className="shrink-0 border-t-2 border-border-soft px-5 py-4">
           <button
             type="button"
             onClick={onClose}

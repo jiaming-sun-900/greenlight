@@ -163,7 +163,7 @@ section; read the whole posting before deciding.
         "optcpt_future_unstated". This applies even when generic work-authorization language is
         present: the OPT/CPT mention still overrides that generic phrase, but overriding it only
         answers the "now" question, and the "future" question stays open. Do NOT reach for
-        "optcpt_overrides_generic" here - that tag is for 4a only.
+        "optcpt_overrides_generic" here - that tag is for 5a only.
   6. Otherwise fall through to the remaining YELLOW tags ("generic_authorization_only",
      "vague_conditional", "silent_no_signal").
 - "deadline" must be an ISO calendar date in YYYY-MM-DD form so the UI can render it in a date \
@@ -470,7 +470,7 @@ def _int_from_env(name: str, default: int) -> int:
 #
 # The numbers are sized for a first-time user exploring the app, who will paste
 # several postings back to back, rather than for the narrowest plausible session.
-# Set either limit to 0 to disable that window (useful when running an eval locally).
+# Set a limit to 0 to disable that one window; both must be 0 to turn the limiter off.
 RATE_LIMIT_PER_MINUTE = _int_from_env("SCREEN_RATE_LIMIT_PER_MINUTE", 10)
 RATE_LIMIT_PER_HOUR = _int_from_env("SCREEN_RATE_LIMIT_PER_HOUR", 60)
 

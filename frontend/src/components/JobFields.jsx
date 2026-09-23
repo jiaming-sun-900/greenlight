@@ -14,8 +14,8 @@ const LABEL = "block mb-1 px-2 text-label font-medium uppercase tracking-wide te
 // competing font-size utilities on one element.
 const CONTROL_BASE =
   "w-full rounded-lg border border-transparent bg-transparent px-2 py-1.5 " +
-  "transition-colors placeholder:text-muted hover:border-gray-200 " +
-  "hover:bg-gray-50 focus:border-accent focus:bg-white focus:outline-none " +
+  "transition-colors placeholder:text-muted hover:border-border " +
+  "hover:bg-hover focus:border-accent focus:bg-surface focus:outline-none " +
   "focus:ring-2 focus:ring-accent/20";
 
 const CONTROL = CONTROL_BASE + " text-body text-ink";
@@ -129,7 +129,7 @@ export function ListField({ label, items, onChange, placeholder }) {
           <li key={index} className="group flex items-center gap-1.5">
             <span
               aria-hidden
-              className="ml-1 h-1 w-1 shrink-0 rounded-full bg-gray-400"
+              className="ml-1 h-1 w-1 shrink-0 rounded-full bg-muted"
             />
             <input
               type="text"
@@ -145,7 +145,7 @@ export function ListField({ label, items, onChange, placeholder }) {
               type="button"
               onClick={() => onChange(list.filter((_, idx) => idx !== index))}
               aria-label={`Remove ${item || "skill"}`}
-              className="focus-ring shrink-0 rounded-md p-1.5 text-muted opacity-0 transition-opacity hover:bg-gray-100 hover:text-ink focus:opacity-100 group-hover:opacity-100 max-md:opacity-100"
+              className="focus-ring shrink-0 rounded-md p-1.5 text-muted opacity-0 transition-opacity hover:bg-hover hover:text-ink focus:opacity-100 group-hover:opacity-100 max-md:opacity-100"
             >
               <CloseGlyph size={12} />
             </button>
@@ -155,7 +155,7 @@ export function ListField({ label, items, onChange, placeholder }) {
       <button
         type="button"
         onClick={() => onChange([...list, ""])}
-        className="focus-ring mt-1 rounded-md px-2 py-1 text-label font-medium text-muted transition-colors hover:bg-gray-100 hover:text-ink"
+        className="focus-ring mt-1 rounded-md px-2 py-1 text-label font-medium text-muted transition-colors hover:bg-hover hover:text-ink"
       >
         + Add skill
       </button>

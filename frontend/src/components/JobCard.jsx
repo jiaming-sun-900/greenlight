@@ -5,19 +5,19 @@ import PriorityChip from "./PriorityChip.jsx";
 
 // Deeper than the pastel badge fills, which are almost invisible as a 4px rule.
 const VERDICT_BORDER = {
-  green: "border-l-emerald-300",
-  yellow: "border-l-yellow-300",
-  red: "border-l-red-300",
+  green: "border-l-edge-green",
+  yellow: "border-l-edge-yellow",
+  red: "border-l-edge-red",
 };
 
 const VERDICT_DOT = {
   green: "bg-accent-dot",
-  yellow: "bg-yellow-500",
-  red: "bg-red-500",
+  yellow: "bg-dot-yellow",
+  red: "bg-dot-red",
 };
 
 const BASE =
-  "rounded-xl border-2 border-l-4 border-gray-200 bg-white p-3 shadow-sm";
+  "rounded-xl border-2 border-l-4 border-border bg-surface p-3 shadow-sm";
 
 /**
  * Card front face with no drag wiring, so the drag overlay can reuse it without

@@ -31,7 +31,7 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4 py-6"
+      className="fixed inset-0 z-40 flex items-center justify-center bg-overlay px-4 py-6"
       {...backdropProps}
     >
       <div
@@ -40,9 +40,9 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
         role="dialog"
         aria-modal="true"
         aria-label={card.position_title || "Job details"}
-        className="flex max-h-full w-full max-w-lg flex-col rounded-2xl bg-white shadow-xl focus:outline-none"
+        className="flex max-h-full w-full max-w-lg flex-col rounded-2xl bg-surface shadow-xl focus:outline-none"
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b-2 border-gray-100 px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b-2 border-border-soft px-5 py-4">
           {/* Title and company are the modal's heading, so they are edited here
               rather than in the field list below. The negative margin pulls the
               inputs' own padding back so they align with the badge underneath. */}
@@ -81,7 +81,7 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="focus-ring shrink-0 rounded-md p-1 text-muted transition-colors hover:bg-gray-100 hover:text-ink"
+            className="focus-ring shrink-0 rounded-md p-1 text-muted transition-colors hover:bg-hover hover:text-ink"
           >
             <CloseGlyph />
           </button>
@@ -102,7 +102,7 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
               id={stageId}
               value={card.column}
               onChange={(event) => onMove(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-body text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+              className="mt-1 w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-body text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             >
               {COLUMNS.map((column) => (
                 <option key={column.id} value={column.id}>
@@ -122,7 +122,7 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
 
         {/* Both states use the same button height, so the footer does not
             change size at the moment the user is asked to confirm a delete. */}
-        <div className="shrink-0 border-t-2 border-gray-100 px-5 py-4">
+        <div className="shrink-0 border-t-2 border-border-soft px-5 py-4">
           {confirmingDelete ? (
             <div className="flex items-center gap-2">
               <p className="flex-1 text-body text-ink">
@@ -131,14 +131,14 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
               <button
                 type="button"
                 onClick={() => setConfirmingDelete(false)}
-                className="btn-block focus-ring text-ink transition-colors hover:bg-gray-100"
+                className="btn-block focus-ring text-ink transition-colors hover:bg-hover"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={onDelete}
-                className="btn-block focus-ring bg-red-600 text-white transition-colors hover:bg-red-700"
+                className="btn-block focus-ring bg-danger-fill text-white transition-colors hover:bg-danger-fill-hover"
               >
                 Delete
               </button>
@@ -148,7 +148,7 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
               <button
                 type="button"
                 onClick={() => setConfirmingDelete(true)}
-                className="btn-block focus-ring text-red-600 transition-colors hover:bg-red-50"
+                className="btn-block focus-ring text-danger transition-colors hover:bg-danger-soft"
               >
                 Delete card
               </button>
