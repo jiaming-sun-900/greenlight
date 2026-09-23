@@ -231,6 +231,15 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
           )}
 
           {list.some((reason) => ASK_TAGS.has(reason.tag)) && <RecruiterAsk />}
+
+          <p className="mt-4 text-label text-muted">
+            This is a reading of the words in one posting, not legal or
+            immigration advice, and not a statement about what the employer will
+            actually do. A posting can be out of date, can be wrong, and can be
+            overridden by whoever is hiring. Before anything rides on it, check
+            with your school's international student office and ask the employer
+            directly.
+          </p>
         </div>
 
         <div className="shrink-0 border-t-2 border-border-soft px-5 py-4">

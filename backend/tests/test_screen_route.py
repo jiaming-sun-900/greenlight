@@ -38,9 +38,12 @@ def fresh_rate_limit(monkeypatch):
 
     The log is module state that outlives a request, so without this a test would
     inherit whatever the previous one spent, and the limits themselves are read from
-    the environment, which a contributor may well have set.
+    the environment, which a contributor may well have set. The screening cache is
+    module state for the same reason: leave it warm and the next test that posts the
+    same job description never reaches the model at all.
     """
     main._request_log.clear()
+    main._screen_cache.clear()
     monkeypatch.setattr(main, "RATE_LIMIT_PER_MINUTE", 10)
     monkeypatch.setattr(main, "RATE_LIMIT_PER_HOUR", 60)
     yield
@@ -174,6 +177,79 @@ class TestInputValidation:
         assert response.status_code == 413
         assert isinstance(response.json()["detail"], str)
         assert calls == []
+
+
+class TestScreeningCache:
+    """The same posting twice is the same question twice."""
+
+    def test_an_identical_posting_is_not_screened_again(self, client, monkeypatch):
+        calls = stub_model(monkeypatch, json.dumps(VALID_RESULT))
+
+        first = client.post("/screen", json={"job_description": POSTING})
+        second = client.post("/screen", json={"job_description": POSTING})
+
+        assert first.status_code == second.status_code == 200
+        assert first.json() == second.json()
+        assert len(calls) == 1, "the second request reached the model"
+
+    def test_whitespace_differences_still_hit(self, client, monkeypatch):
+        """Copying the same listing off two job boards differs by line wrapping
+        far more often than by words."""
+        calls = stub_model(monkeypatch, json.dumps(VALID_RESULT))
+
+        client.post("/screen", json={"job_description": POSTING})
+        rewrapped = "\n  ".join(POSTING.split(" "))
+        client.post("/screen", json={"job_description": rewrapped})
+
+        assert len(calls) == 1
+
+    def test_a_different_posting_misses(self, client, monkeypatch):
+        calls = stub_model(monkeypatch, json.dumps(VALID_RESULT))
+
+        client.post("/screen", json={"job_description": POSTING})
+        client.post("/screen", json={"job_description": POSTING + " Remote."})
+
+        assert len(calls) == 2
+
+    def test_changing_the_prompt_invalidates_everything(self, client, monkeypatch):
+        """A prompt fix has to reach people who already screened a posting."""
+        calls = stub_model(monkeypatch, json.dumps(VALID_RESULT))
+        client.post("/screen", json={"job_description": POSTING})
+
+        monkeypatch.setattr(main, "_PROMPT_FINGERPRINT", "different")
+        client.post("/screen", json={"job_description": POSTING})
+
+        assert len(calls) == 2
+
+    def test_a_hit_still_costs_the_caller_quota(self, client, monkeypatch):
+        """Otherwise one posting can be replayed for free forever."""
+        monkeypatch.setattr(main, "RATE_LIMIT_PER_MINUTE", 3)
+        monkeypatch.setattr(main, "RATE_LIMIT_PER_HOUR", 0)
+        stub_model(monkeypatch, json.dumps(VALID_RESULT))
+
+        codes = [
+            client.post("/screen", json={"job_description": POSTING}).status_code
+            for _ in range(5)
+        ]
+        assert codes == [200, 200, 200, 429, 429]
+
+    def test_a_failed_screening_is_not_cached(self, client, monkeypatch):
+        calls = stub_model(monkeypatch, "not json at all")
+
+        first = client.post("/screen", json={"job_description": POSTING})
+        second = client.post("/screen", json={"job_description": POSTING})
+
+        assert first.status_code == second.status_code == 502
+        assert len(calls) == 4, "each attempt retries once, and neither was cached"
+
+    def test_the_cache_is_bounded(self, client, monkeypatch):
+        monkeypatch.setattr(main, "SCREEN_CACHE_MAX_ENTRIES", 5)
+        stub_model(monkeypatch, json.dumps(VALID_RESULT))
+
+        for i in range(20):
+            client.post("/screen", json={"job_description": f"{POSTING} #{i}"})
+
+        assert len(main._screen_cache) == 5
 
 
 @pytest.fixture

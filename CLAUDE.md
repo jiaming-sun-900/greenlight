@@ -10,8 +10,10 @@ Visa eligibility screener and job application tracker for international students
 - The backend reads `ANTHROPIC_API_KEY` from `backend/.env` (gitignored, never commit it).
 - **No CORS origin is hardcoded, and by default no CORS middleware is installed at all.** The frontend and API are same-origin in both environments: Vercel serves them under one domain, and the Vite dev server proxies `/api` to the local backend with the prefix stripped (see `frontend/vite.config.js`). `ALLOWED_ORIGINS` is a comma-separated escape hatch for running the frontend cross-origin; the middleware is added only when it is set.
 - `POST /screen` is rate limited per IP (10/min, 60/hr by default, via `SCREEN_RATE_LIMIT_PER_MINUTE` / `SCREEN_RATE_LIMIT_PER_HOUR`, set one to 0 to disable that window; both must be 0 to turn the limiter off) and rejects a job description over `MAX_JOB_DESCRIPTION_CHARS` (20,000) with a 400. The frontend mirrors that cap in `hooks/useScreening.js` so an over-long paste is caught before a round trip. A body whose `Content-Length` exceeds `MAX_REQUEST_BYTES` is refused with a 413 by middleware, before anything reads it: a field-level `max_length` only fires once Starlette has buffered the whole body and `json.loads` has built it in memory.
+- **Identical postings are screened once.** `/screen` keeps a content-addressed cache of validated results, keyed on the normalised posting plus the model plus a fingerprint of `SYSTEM_PROMPT`, so a prompt change invalidates every entry. Popular listings get pasted by a lot of people, and a hit costs nothing and returns in milliseconds instead of seconds. It is checked after the rate limit, deliberately: a hit still spends the caller's quota, or one posting could be replayed for free forever. Per warm instance and bounded, like the rate limiter.
+- **Every billed call logs its token usage.** `logging.basicConfig` runs at import (`LOG_LEVEL`, default `INFO`) because without it the module logger inherits the root WARNING default and every `logger.info` is dropped, including that usage line. It is the only way to know what a screening costs. Note `cache_read` in that line will stay 0: prompt caching needs a prefix of at least 4096 tokens on Haiku 4.5 and `SYSTEM_PROMPT` is about 2500, so a `cache_control` breakpoint would be ignored in silence rather than rejected. Re-check the threshold for the model in use before adding one.
 - **Forwarding headers are only trusted when something is known to rewrite them.** `TRUST_PROXY_HEADERS` is on automatically on Vercel (the platform sets `VERCEL`) and otherwise has to be set by the operator. Without it the rate limiter keys on the socket peer, because a directly exposed uvicorn will repeat whatever `x-real-ip` the caller invented and every request lands in a bucket of its own.
-- Backend tests live in `backend/tests/`. `pytest` runs the 67 offline ones for free: `test_validation.py` covers the `ScreenResult` schema and the priority table, `test_screen_route.py` covers the `/screen` route, the retry loop, the status codes and the rate limiter with `_call_model` stubbed. `pytest --eval` additionally runs the screening eval against the live Claude API, which costs money, so it is opt-in. When you change a screening rule, add the posting that motivated it to `backend/tests/postings.py` first.
+- Backend tests live in `backend/tests/`. `pytest` runs the 74 offline ones for free: `test_validation.py` covers the `ScreenResult` schema and the priority table, `test_screen_route.py` covers the `/screen` route, the retry loop, the status codes and the rate limiter with `_call_model` stubbed. `pytest --eval` additionally runs the screening eval against the live Claude API, which costs money, so it is opt-in. When you change a screening rule, add the posting that motivated it to `backend/tests/postings.py` first.
 
 ## Typography scale
 
@@ -88,6 +90,16 @@ The request lifecycle is a matched pair across the two halves and has to be chan
 - **The tracker board is elastic with a floor, not fixed.** Columns are `min-w-56 flex-1`: given room they share the row evenly so the board always reaches both edges of the container, and below the floor the row overflows and scrolls horizontally, which is what keeps five stages usable on a phone. The floor is 224px because that is the width at which all five columns still fit a 13 inch laptop; a fixed `w-72` made the board scroll by a few dozen pixels on every laptop and left dead space on every monitor. No scroll snapping: it fights an in-progress drag. The drag overlay copies the dragged card's measured width rather than assuming one.
 - Column header hints reserve two lines whether or not they need them. At the narrow end of the range only "Rejected, withdrawn, or expired" wraps, which started that column's cards lower than the rest.
 - Horizontal page padding steps `px-4` -> `sm:px-6` -> `xl:px-10` rather than sitting at a single value, so a 375px viewport does not lose 48px to gutters.
+
+## Disclaimers are load bearing
+
+Greenlight reads a posting's wording and tells a student what it implies about their
+visa status. They can act on that and be wrong in either direction, and the cost is a
+wasted application or a missed one. So the disclaimer is a feature, not fine print:
+a short form in `ViewShell` renders under the content on every view, and the long
+form is the last thing in the "Why this verdict?" modal. Do not move either behind a
+link, a tooltip, or a first-run dismissal, and do not let a layout change drop them.
+See `SPEC.md` > What Greenlight Does Not Claim.
 
 ## Writing style
 

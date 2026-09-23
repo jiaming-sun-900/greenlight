@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import json
 import logging
 import os
@@ -17,7 +18,17 @@ from pydantic import BaseModel, Field, ValidationError, field_validator, model_v
 
 load_dotenv()
 
+# Without this the module logger inherits the root logger's WARNING default and
+# every logger.info below is silently dropped, including the per-call token usage
+# that is the only way to know what a screening costs. Uvicorn and Vercel both
+# capture stdout, so a stream handler is all that is needed.
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
 logger = logging.getLogger(__name__)
+logger.setLevel(LOG_LEVEL)
 
 MODEL = "claude-haiku-4-5-20251001"
 
@@ -436,6 +447,23 @@ def _call_model(job_description: str, max_tokens: int = MODEL_MAX_TOKENS) -> str
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": job_description}],
     )
+    # Every billed call, logged. Without this there is no way to tell what a
+    # screening actually costs or whether a change to the prompt moved it.
+    #
+    # No cache_control on the system prompt: Haiku 4.5 will not cache a prefix
+    # under 4096 tokens and this one is about 2500, so a breakpoint here would
+    # be silently ignored rather than rejected. Re-check that threshold before
+    # adding one, and confirm it with cache_read_input_tokens below rather than
+    # assuming it took.
+    usage = getattr(message, "usage", None)
+    if usage is not None:
+        logger.info(
+            "Screening call: input=%s output=%s cache_read=%s stop=%s",
+            getattr(usage, "input_tokens", "?"),
+            getattr(usage, "output_tokens", "?"),
+            getattr(usage, "cache_read_input_tokens", 0),
+            message.stop_reason,
+        )
     # Without these two checks both outcomes below arrive as a JSON parse failure,
     # which costs a second identical call and then reports the wrong problem.
     if message.stop_reason == "max_tokens":
@@ -629,6 +657,56 @@ def _enforce_rate_limit(request: Request) -> None:
         seen.append(now)
 
 
+# Screening the same posting twice is the same question twice. Popular listings
+# get pasted by a lot of people, so a content-addressed cache turns every repeat
+# into a free, instant answer. The key covers the model and the prompt as well as
+# the posting: changing either has to invalidate everything, or a prompt fix
+# would not reach anyone who had already screened a posting under the old one.
+#
+# The store is per warm instance, like the rate limiter. That makes this a real
+# saving rather than a complete one, and it is the reason there is no database.
+SCREEN_CACHE_MAX_ENTRIES = 500
+SCREEN_CACHE_TTL_SECONDS = 24 * 3600
+
+_screen_cache: "OrderedDict[str, tuple[float, dict]]" = OrderedDict()
+_screen_cache_lock = threading.Lock()
+_PROMPT_FINGERPRINT = hashlib.sha256(SYSTEM_PROMPT.encode()).hexdigest()[:12]
+
+
+def _cache_key(job_description: str) -> str:
+    """Content address for a posting.
+
+    Whitespace is collapsed first: the same listing copied out of two different
+    job boards differs by line wrapping far more often than by words, and those
+    should not be two separate entries.
+    """
+    normalized = " ".join(job_description.split())
+    digest = hashlib.sha256(normalized.encode()).hexdigest()
+    return f"{MODEL}:{_PROMPT_FINGERPRINT}:{digest}"
+
+
+def _cache_get(key: str) -> dict | None:
+    now = time.monotonic()
+    with _screen_cache_lock:
+        entry = _screen_cache.get(key)
+        if entry is None:
+            return None
+        stored_at, payload = entry
+        if now - stored_at > SCREEN_CACHE_TTL_SECONDS:
+            del _screen_cache[key]
+            return None
+        _screen_cache.move_to_end(key)
+        return payload
+
+
+def _cache_put(key: str, payload: dict) -> None:
+    with _screen_cache_lock:
+        _screen_cache[key] = (time.monotonic(), payload)
+        _screen_cache.move_to_end(key)
+        while len(_screen_cache) > SCREEN_CACHE_MAX_ENTRIES:
+            _screen_cache.popitem(last=False)
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -648,6 +726,15 @@ def screen(request: ScreenRequest, http_request: Request):
                 f"Job description is too long (max {MAX_JOB_DESCRIPTION_CHARS:,} characters)."
             ),
         )
+
+    # Checked after the rate limit, not before: a cache hit should still count
+    # against the caller's quota, or an attacker could replay one posting for
+    # free and keep a warm instance busy.
+    cache_key = _cache_key(request.job_description)
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        logger.info("Screening cache hit (%s entries warm)", len(_screen_cache))
+        return cached
 
     # Ask the model, then parse and validate. If the output isn't valid JSON, or doesn't
     # match ScreenResult, retry once before giving up. Every detail string below is
@@ -687,7 +774,9 @@ def screen(request: ScreenRequest, http_request: Request):
 
         try:
             payload = json.loads(_strip_code_fences(raw))
-            return ScreenResult.model_validate(payload).model_dump()
+            result = ScreenResult.model_validate(payload).model_dump()
+            _cache_put(cache_key, result)
+            return result
         except (json.JSONDecodeError, ValidationError) as exc:
             last_error = exc
             continue

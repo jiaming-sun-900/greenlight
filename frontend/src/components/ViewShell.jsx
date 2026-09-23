@@ -48,6 +48,15 @@ export default function ViewShell({ title, subtitle, nav, children }) {
       </header>
 
       {children}
+
+      {/* Present on every view, not tucked behind a modal. Greenlight reads a
+          posting's wording and says what it implies; a student can act on that
+          and be wrong, in either direction, and the cost of being wrong is a
+          wasted application or a missed one. Saying so is not boilerplate. */}
+      <p className="mt-4 shrink-0 text-center text-label text-muted">
+        Greenlight reads what a posting says. It is not legal or immigration
+        advice.
+      </p>
     </div>
   );
 }

@@ -394,6 +394,25 @@ otherwise render a yellow badge next to the worst possible priority.
 
 ---
 
+## What Greenlight Does Not Claim
+
+Greenlight reads the words in one job posting and says what they imply for a student
+on F-1. It is not legal or immigration advice, it is not a statement about what an
+employer will actually do, and it can be wrong in both directions: a red verdict on a
+posting whose recruiter would in fact sponsor, or a green one on a posting the
+employer no longer stands behind.
+
+That matters more here than in most products, because the cost of believing it is an
+application not sent or an interview loop not worth finishing. So the disclaimer is
+not fine print: a short form sits on every view under the content, and the long form
+sits at the bottom of the "Why this verdict?" modal, where the judgement is actually
+delivered. Neither is optional, and neither should be moved behind a link.
+
+Every verdict also points the student at the two places that can give a real answer:
+their school's international student office, and the employer.
+
+---
+
 ## Visual Design Guidelines
 
 - Clean, minimal aesthetic. Lots of white space.
