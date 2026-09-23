@@ -3,29 +3,35 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  TouchSensor,
   useDroppable,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
 import CardModal from "../components/CardModal.jsx";
 import JobCard, { CardFace } from "../components/JobCard.jsx";
-import ViewToggle from "../components/ViewToggle.jsx";
+import ViewShell from "../components/ViewShell.jsx";
 import { COLUMNS, COLUMN_IDS } from "../hooks/useCards.js";
 import { byPriorityThenRecent } from "../lib/priority.js";
 
 function Column({ column, cards, onOpenCard, highlightId }) {
+  // The whole column is the drop target, header included. With the ref on the
+  // inner list only, releasing a card over a column's title gave the neighbour
+  // more overlap, so drops near the top of the board landed in the wrong place.
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
   return (
     <section
+      ref={setNodeRef}
       aria-label={column.label}
-      className="flex w-72 shrink-0 flex-col rounded-2xl border-2 border-gray-200 bg-white/70"
+      className={
+        "flex min-h-[22rem] w-72 shrink-0 flex-col rounded-2xl border-2 bg-white shadow-sm transition-colors md:min-h-0 " +
+        (isOver ? "border-accent/40" : "border-gray-200")
+      }
     >
-      <header className="shrink-0 border-b-2 border-gray-100 px-4 py-3">
+      <header className="shrink-0 border-b-2 border-gray-100 px-5 py-3">
         <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-title font-semibold text-ink">
-            {column.label}
-          </h2>
+          <h2 className="text-title font-semibold text-ink">{column.label}</h2>
           <span className="text-micro tabular-nums text-muted">
             {cards.length}
           </span>
@@ -34,7 +40,6 @@ function Column({ column, cards, onOpenCard, highlightId }) {
       </header>
 
       <div
-        ref={setNodeRef}
         className={
           "min-h-0 flex-1 space-y-3 overflow-y-auto p-3 transition-colors " +
           (isOver ? "bg-accent-soft/50" : "")
@@ -61,7 +66,7 @@ function Column({ column, cards, onOpenCard, highlightId }) {
 
 function EmptyBoard({ onNavigateToScreener }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 py-16 text-center">
       <span aria-hidden className="icon-lg">
         🗂️
       </span>
@@ -75,7 +80,7 @@ function EmptyBoard({ onNavigateToScreener }) {
       <button
         type="button"
         onClick={onNavigateToScreener}
-        className="btn-accent mt-2 rounded-full px-6 py-2.5 text-body font-medium text-white"
+        className="btn-accent btn-pill focus-ring mt-2 text-white"
       >
         Screen a job posting
       </button>
@@ -88,11 +93,19 @@ const SORTS = [
   { id: "recent", label: "Newest" },
 ];
 
-/** Reorders cards within every column. Stages are set by dragging, not by sort. */
+/**
+ * Reorders cards within every column. Stages are set by dragging, not by sort.
+ *
+ * Sits above the board rather than in the title row: it only appears once there
+ * is more than one card, and inside the title row that made the row taller than
+ * the screener's and shifted the view toggle down on every switch.
+ */
 function SortToggle({ value, onChange }) {
   return (
-    <div className="mt-2 flex items-center gap-2">
-      <span className="text-micro uppercase tracking-wide text-muted">Sort</span>
+    <div className="mb-3 flex shrink-0 items-center gap-2">
+      <span className="text-label font-medium uppercase tracking-wide text-muted">
+        Sort
+      </span>
       <div className="flex items-center gap-1">
         {SORTS.map((sort) => {
           const isActive = value === sort.id;
@@ -103,7 +116,7 @@ function SortToggle({ value, onChange }) {
               onClick={() => onChange(sort.id)}
               aria-pressed={isActive}
               className={
-                "rounded-full px-2.5 py-0.5 text-micro font-medium transition-colors " +
+                "focus-ring rounded-full px-3 py-1 text-label font-medium transition-colors " +
                 (isActive
                   ? "bg-gray-200 text-ink"
                   : "text-muted hover:bg-gray-100 hover:text-ink")
@@ -121,6 +134,8 @@ function SortToggle({ value, onChange }) {
 export default function Tracker({
   nav,
   cards,
+  sortBy,
+  onSortChange,
   onUpdateCard,
   onDeleteCard,
   onMoveCard,
@@ -129,19 +144,29 @@ export default function Tracker({
   onHighlightShown,
 }) {
   const [openId, setOpenId] = useState(null);
-  const [sortBy, setSortBy] = useState("priority");
   const [draggingId, setDraggingId] = useState(null);
 
-  // A click must not be read as a drag, or cards could never be opened.
+  // A click must not be read as a drag, or cards could never be opened. Touch
+  // gets its own sensor with a hold delay instead: the pointer sensor would
+  // need `touch-action: none` on every card, which makes a card an island a
+  // finger cannot scroll the column by.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 8 },
+    })
   );
 
-  // Fade the "just added" ring after a beat.
+  // Fade the "just added" ring after a beat. The cleanup also clears the id, so
+  // switching views inside those 2.5s does not leave a stale highlight waiting
+  // to fire the next time the board is opened.
   useEffect(() => {
     if (!highlightId) return;
     const timer = setTimeout(onHighlightShown, 2500);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      onHighlightShown();
+    };
   }, [highlightId, onHighlightShown]);
 
   const byColumn = useMemo(() => {
@@ -166,73 +191,64 @@ export default function Tracker({
   function handleDragEnd(event) {
     setDraggingId(null);
     const { active, over } = event;
-    if (over && COLUMN_IDS.includes(over.id)) {
-      onMoveCard(active.id, over.id);
-    }
+    if (!over || !COLUMN_IDS.includes(over.id)) return;
+    // Dropping a card back where it started is not a move. Treating it as one
+    // rewrites every card object and rewrites localStorage for no change.
+    const card = cards.find((c) => c.id === active.id);
+    if (!card || card.column === over.id) return;
+    onMoveCard(active.id, over.id);
   }
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col px-4 pb-6 sm:px-6">
-      {/* Sticky for the same reason as the screener's: on a narrow viewport
-          the board is taller than the screen and the toggle has to stay
-          reachable. See the note in views/Screener.jsx. */}
-      <header className="sticky top-0 z-20 -mx-4 mb-5 shrink-0 bg-bg/95 px-4 pb-4 pt-6 backdrop-blur sm:-mx-6 sm:px-6">
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-          <div className="min-w-0">
-            <h1 className="text-display font-semibold tracking-tight text-text">
-              Application Tracker
-            </h1>
-            <p className="mt-1 text-body text-muted">
-              {cards.length === 0
-                ? "Screened jobs you save will show up here."
-                : `${cards.length} tracked ${
-                    cards.length === 1 ? "application" : "applications"
-                  }. Drag a card between stages, or click it to edit.`}
-            </p>
-            {cards.length > 1 && (
-              <SortToggle value={sortBy} onChange={setSortBy} />
-            )}
-          </div>
-          <ViewToggle {...nav} />
-        </div>
-      </header>
-
+    <ViewShell
+      nav={nav}
+      title="Application Tracker"
+      subtitle={
+        cards.length === 0
+          ? "Screened jobs you save will show up here."
+          : `${cards.length} tracked ${
+              cards.length === 1 ? "application" : "applications"
+            }. Drag a card between stages, or click it to edit.`
+      }
+    >
       {cards.length === 0 ? (
         <EmptyBoard onNavigateToScreener={onNavigateToScreener} />
       ) : (
-        <DndContext
-          sensors={sensors}
-          onDragStart={(event) => setDraggingId(event.active.id)}
-          onDragCancel={() => setDraggingId(null)}
-          onDragEnd={handleDragEnd}
-        >
-          {/* The board does not reflow: columns keep their width and the row
-              scrolls sideways, which is what makes a five-stage Kanban usable
-              on a phone. Momentum scrolling only, no snap points, since snap
-              fights a drag in progress. */}
-          <div className="min-h-0 flex-1 overflow-x-auto overscroll-x-contain pb-2">
-            <div className="flex h-full min-w-max gap-4">
-              {COLUMNS.map((column) => (
-                <Column
-                  key={column.id}
-                  column={column}
-                  cards={byColumn[column.id]}
-                  highlightId={highlightId}
-                  onOpenCard={setOpenId}
-                />
-              ))}
+        <>
+          {cards.length > 1 && (
+            <SortToggle value={sortBy} onChange={onSortChange} />
+          )}
+          <DndContext
+            sensors={sensors}
+            onDragStart={(event) => setDraggingId(event.active.id)}
+            onDragCancel={() => setDraggingId(null)}
+            onDragEnd={handleDragEnd}
+          >
+            {/* The board does not reflow: columns keep their width and the row
+                scrolls sideways, which is what makes a five-stage Kanban usable
+                on a phone. Momentum scrolling only, no snap points, since snap
+                fights a drag in progress. */}
+            <div className="overflow-x-auto overscroll-x-contain pb-2 md:min-h-0 md:flex-1">
+              <div className="flex min-w-max gap-4 md:h-full">
+                {COLUMNS.map((column) => (
+                  <Column
+                    key={column.id}
+                    column={column}
+                    cards={byColumn[column.id]}
+                    highlightId={highlightId}
+                    onOpenCard={setOpenId}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
 
-          <DragOverlay dropAnimation={null}>
-            {draggingCard ? (
-              <CardFace
-                card={draggingCard}
-                className="w-72 rotate-1 shadow-lg"
-              />
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+            <DragOverlay dropAnimation={null}>
+              {draggingCard ? (
+                <CardFace card={draggingCard} className="w-72 rotate-1 shadow-lg" />
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        </>
       )}
 
       {openCard && (
@@ -247,6 +263,6 @@ export default function Tracker({
           onClose={() => setOpenId(null)}
         />
       )}
-    </div>
+    </ViewShell>
   );
 }

@@ -22,7 +22,7 @@ export const PRIORITY_META = {
   A: {
     label: "Apply",
     blurb: "Both questions answered. Spend an application here.",
-    chip: "bg-[#d1fae5] text-emerald-900",
+    chip: "bg-accent-soft text-emerald-900",
   },
   B: {
     label: "Ask first",
@@ -32,7 +32,7 @@ export const PRIORITY_META = {
   C: {
     label: "Low signal",
     blurb: "Nothing to go on, or a role with a known end date.",
-    chip: "bg-gray-100 text-gray-700",
+    chip: "bg-gray-100 text-ink",
   },
   D: {
     label: "Skip",

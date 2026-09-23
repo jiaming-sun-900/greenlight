@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import DeadlineBadge from "./DeadlineBadge.jsx";
 import PriorityChip from "./PriorityChip.jsx";
@@ -37,9 +38,7 @@ export function CardFace({ card, className = "", ...rest }) {
       }
       {...rest}
     >
-      <h3 className="text-body font-semibold leading-snug text-ink">
-        {title}
-      </h3>
+      <h3 className="text-body font-semibold leading-snug text-ink">{title}</h3>
       <p className="mt-0.5 text-label text-muted">{company}</p>
       <div className="mt-2 flex items-center gap-2">
         <span
@@ -62,6 +61,15 @@ export default function JobCard({ card, onOpen, highlighted = false }) {
   const { listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: card.id,
   });
+  const node = useRef(null);
+
+  // Under the default priority sort a freshly added C or D card lands at the
+  // bottom of a long column, so the ring meant to point it out animates
+  // entirely off screen.
+  useEffect(() => {
+    if (!highlighted) return;
+    node.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [highlighted]);
 
   const title = card.position_title || "Untitled role";
   const company = card.company_name || "Unknown company";
@@ -69,8 +77,13 @@ export default function JobCard({ card, onOpen, highlighted = false }) {
   return (
     <CardFace
       card={card}
-      ref={setNodeRef}
-      // Drag with the pointer; open with click or Enter.
+      ref={(el) => {
+        node.current = el;
+        setNodeRef(el);
+      }}
+      // Drag with the pointer; open with click or Enter. `touch-manipulation`
+      // rather than `touch-none`: the touch sensor activates on a hold, so a
+      // plain swipe still has to reach the column underneath and scroll it.
       {...listeners}
       style={
         transform
@@ -88,8 +101,7 @@ export default function JobCard({ card, onOpen, highlighted = false }) {
         }
       }}
       className={
-        "cursor-grab touch-none transition-shadow hover:shadow-md active:cursor-grabbing " +
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40" +
+        "focus-ring cursor-grab touch-manipulation transition-shadow hover:shadow-md active:cursor-grabbing" +
         (isDragging ? " opacity-40" : "") +
         (highlighted ? " ring-2 ring-accent/50" : "")
       }

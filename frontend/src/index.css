@@ -47,16 +47,6 @@
   line-height: 1;
 }
 
-:root {
-  --color-bg: #fafafa;
-  --color-text: #111111;
-  --color-accent: #059669;
-  --color-accent-hover: #047857;
-  --color-accent-dot: #10b981;
-  --color-accent-soft: #d1fae5;
-  --color-accent-glow: #10b981;
-}
-
 html,
 body,
 #root {
@@ -69,6 +59,35 @@ body {
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* One focus ring for every control. Keyboard focus was previously invisible on
+   every button in the app except a job card. */
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+/* The two button shapes, by role. A hero call to action is a pill; an action
+   that belongs to a panel or a modal footer is a block. Sizes live here rather
+   than at each call site, which is how Analyze ended up 8px wider than the
+   tracker's otherwise identical empty-state button. */
+@utility btn-pill {
+  border-radius: calc(infinity * 1px);
+  padding: 0.625rem 2rem;
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  font-weight: 500;
+}
+
+@utility btn-block {
+  border-radius: var(--radius-lg);
+  padding: 0.625rem 1rem;
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  font-weight: 500;
 }
 
 /* Accent buttons. A shallow gradient plus a hairline top highlight reads as a
@@ -110,10 +129,15 @@ body {
       0 1px 12px -2px var(--color-accent-glow);
   }
 
+  /* Readable rather than merely dimmed: white on gray-300 is about 1.5:1, so
+     the label of a disabled Analyze button all but disappears. */
   &:disabled {
     background-image: none;
     box-shadow: none;
     filter: none;
+    background-color: #e5e7eb;
+    color: var(--color-muted);
+    cursor: not-allowed;
   }
 }
 
