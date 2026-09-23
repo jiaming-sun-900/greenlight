@@ -56,7 +56,10 @@ class TestRejected:
             ),
             pytest.param({"verdict_reasons": []}, id="empty-reasons"),
             pytest.param({"deadline": "March 15, 2026"}, id="prose-deadline"),
-            pytest.param({"deadline": "2026-13-99x"}, id="malformed-deadline"),
+            pytest.param({"deadline": "2026-13-99"}, id="impossible-month-and-day"),
+            pytest.param({"deadline": "2026-02-31"}, id="day-past-the-end-of-february"),
+            pytest.param({"deadline": "0000-00-00"}, id="all-zero-date"),
+            pytest.param({"deadline": "2026-10-15x"}, id="trailing-junk"),
             pytest.param({"preferred_skills": "SQL"}, id="skills-not-a-list"),
             pytest.param({"position_title": {"a": 1}}, id="title-not-a-string"),
             pytest.param({"role_term": "part_time"}, id="role-term-not-in-enum"),
@@ -109,6 +112,35 @@ class TestOngoingOptcptDemotion:
             verdict_reasons=[{"tag": "explicit_optcpt", "detected_phrase": "open to OPT and CPT"}],
         )
         assert result.verdict_reasons[0].detected_phrase == "open to OPT and CPT"
+
+    def test_demotion_quotes_the_optcpt_phrase_not_the_generic_one(self):
+        """The reasons arrive in the model's order; the phrase kept is the OPT/CPT evidence."""
+        result = build(
+            verdict="green",
+            role_term="ongoing",
+            verdict_reasons=[
+                {
+                    "tag": "optcpt_overrides_generic",
+                    "detected_phrase": "must be authorized to work in the United States",
+                },
+                {
+                    "tag": "explicit_optcpt",
+                    "detected_phrase": "we welcome candidates on OPT or CPT",
+                },
+            ],
+        )
+        assert result.verdict_reasons[0].detected_phrase == "we welcome candidates on OPT or CPT"
+
+    def test_demotion_falls_back_to_the_override_phrase(self):
+        result = build(
+            verdict="green",
+            role_term="ongoing",
+            verdict_reasons=[
+                {"tag": "explicit_optcpt", "detected_phrase": None},
+                {"tag": "optcpt_overrides_generic", "detected_phrase": "OPT/CPT accepted"},
+            ],
+        )
+        assert result.verdict_reasons[0].detected_phrase == "OPT/CPT accepted"
 
     def test_explicit_h1b_commitment_keeps_green(self):
         result = build(

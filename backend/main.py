@@ -1,7 +1,9 @@
+import datetime
 import json
 import logging
 import os
 import re
+import threading
 import time
 from collections import defaultdict, deque
 from typing import Literal
@@ -18,7 +20,13 @@ logger = logging.getLogger(__name__)
 
 MODEL = "claude-haiku-4-5-20251001"
 
-client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from the environment (.env)
+# Reads ANTHROPIC_API_KEY from the environment (.env). The SDK defaults are a 600s
+# timeout and two retries per call, which is an order of magnitude past the 60s
+# maxDuration this function is deployed with: a stalled upstream would burn the whole
+# budget and hand the client Vercel's own gateway error instead of ours. A timeout
+# ends the request rather than re-entering the retry loop in screen(), so the worst
+# case is two 20s attempts inside the SDK before we answer with a 504.
+client = anthropic.Anthropic(timeout=20.0, max_retries=1)
 
 app = FastAPI()
 
@@ -42,13 +50,18 @@ if _allowed_origins:
 
 
 # A job description far longer than this is not a posting. The cap keeps a single
-# request from spending an unbounded amount of Claude credit, and it is enforced by
-# the schema so an oversized body is rejected before the model is ever called.
+# request from spending an unbounded amount of Claude credit, and it is checked in
+# screen() before the model is ever called.
 MAX_JOB_DESCRIPTION_CHARS = 20_000
 
 
 class ScreenRequest(BaseModel):
-    job_description: str = Field(max_length=MAX_JOB_DESCRIPTION_CHARS)
+    # The real cap is enforced in screen(), not here. A pydantic max_length failure
+    # comes back as FastAPI's 422, whose detail is a list of dicts rather than a
+    # string, and the frontend renders that as "[object Object]". This field guard is
+    # deliberately far looser than the real limit: it exists only so a multi-megabyte
+    # body is thrown out during parsing instead of being copied around first.
+    job_description: str = Field(max_length=MAX_JOB_DESCRIPTION_CHARS * 50)
 
 
 SYSTEM_PROMPT = """You are a visa-eligibility screener for international students on F-1 visas. \
@@ -253,6 +266,28 @@ class VerdictReason(BaseModel):
         return value
 
 
+# Tag order for picking the phrase the demotion below keeps, best evidence first.
+# "explicit_optcpt" quotes the sentence that names OPT/CPT; "optcpt_overrides_generic"
+# is about the override and may quote either side of it.
+_OPTCPT_EVIDENCE_TAGS = ("explicit_optcpt", "optcpt_overrides_generic")
+
+
+def _optcpt_evidence_phrase(reasons: list["VerdictReason"]) -> str | None:
+    """Pick the phrase that best evidences OPT/CPT acceptance.
+
+    The reasons arrive in whatever order the model emitted them, so taking the first
+    non-empty phrase in list order can quote a generic "must be authorized to work in
+    the US" sentence as proof that the employer takes OPT/CPT, which is the opposite of
+    what it says. Ask by tag instead, and only fall back to list order when neither
+    OPT/CPT tag carries a phrase.
+    """
+    for tag in _OPTCPT_EVIDENCE_TAGS:
+        for reason in reasons:
+            if reason.tag == tag and reason.detected_phrase:
+                return reason.detected_phrase
+    return next((r.detected_phrase for r in reasons if r.detected_phrase), None)
+
+
 class ScreenResult(BaseModel):
     """The shape the model is asked to return. Validated before anything reaches the client."""
 
@@ -279,6 +314,11 @@ class ScreenResult(BaseModel):
             return None
         if not ISO_DATE.match(text):
             raise ValueError(f"deadline must be YYYY-MM-DD or null, got {text!r}")
+        # The regex only checks the shape, so "2026-13-45" and "2026-02-31" would sail
+        # through it and reach a date picker that cannot render them. Let the ValueError
+        # out: an impossible date is a bad model response like any other, and it rides
+        # the same retry-then-502 path.
+        datetime.date.fromisoformat(text)
         return text
 
     @model_validator(mode="after")
@@ -298,9 +338,7 @@ class ScreenResult(BaseModel):
             # An explicit future-sponsorship commitment is present; green stands.
             return self
 
-        phrase = next(
-            (r.detected_phrase for r in self.verdict_reasons if r.detected_phrase), None
-        )
+        phrase = _optcpt_evidence_phrase(self.verdict_reasons)
         logger.info(
             "Demoting green to yellow: ongoing role with OPT/CPT acceptance only (tags=%s)",
             ", ".join(sorted(tags)),
@@ -337,19 +375,46 @@ class ScreenResult(BaseModel):
         return self
 
 
-def _call_model(job_description: str) -> str:
+# A full screening result is comfortably under 1024 tokens; a long posting with many
+# quoted phrases occasionally is not. Rather than pay for the bigger ceiling on every
+# call, start small and let the one retry re-issue with room to finish.
+MODEL_MAX_TOKENS = 1024
+MODEL_MAX_TOKENS_RETRY = 4096
+
+
+class TruncatedModelResponse(Exception):
+    """The model ran out of output tokens mid-JSON. Retrying with more room usually fixes it."""
+
+
+def _call_model(job_description: str, max_tokens: int = MODEL_MAX_TOKENS) -> str:
     """Call Claude and return the raw text of the first content block."""
     message = client.messages.create(
         model=MODEL,
-        max_tokens=1024,
+        max_tokens=max_tokens,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": job_description}],
     )
+    # Without these two checks both outcomes below arrive as a JSON parse failure,
+    # which costs a second identical call and then reports the wrong problem.
+    if message.stop_reason == "max_tokens":
+        raise TruncatedModelResponse(
+            f"model hit max_tokens ({max_tokens}) before closing its JSON object"
+        )
+    if message.stop_reason == "refusal":
+        # A refusal is stable: the same posting refused once will be refused again, so
+        # a retry only spends another call to land in the same place. Tell the user.
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Claude declined to screen this text. Please check that what you "
+                "pasted is a job posting."
+            ),
+        )
     return next((block.text for block in message.content if block.type == "text"), "")
 
 
 def _strip_code_fences(text: str) -> str:
-    """Remove a leading/trailing markdown code fence if the model wrapped its JSON in one."""
+    """Pull the JSON object out of the model's reply, code fences and preamble notwithstanding."""
     stripped = text.strip()
     if stripped.startswith("```"):
         stripped = stripped[3:]
@@ -357,7 +422,39 @@ def _strip_code_fences(text: str) -> str:
             stripped = stripped[4:]
         if stripped.endswith("```"):
             stripped = stripped[:-3]
-    return stripped.strip()
+    stripped = stripped.strip()
+
+    try:
+        json.loads(stripped)
+    except json.JSONDecodeError:
+        # Fence-stripping does nothing for a conversational preamble ("Here is the
+        # JSON:") or a trailing note, and both defeat the parse on their own. The
+        # contract is a single JSON object, so the outermost braces bracket it: fall
+        # back to that slice, which costs a retry's worth of credit to skip.
+        start, end = stripped.find("{"), stripped.rfind("}")
+        if start != -1 and end > start:
+            return stripped[start : end + 1]
+    return stripped
+
+
+def _int_from_env(name: str, default: int) -> int:
+    """Read an integer setting, falling back to the default instead of failing import.
+
+    A typo in a dashboard env var would otherwise raise at import time, and because
+    /api/screen and /api/health both import this module it would take the liveness
+    check down along with the endpoint it was meant to configure. A rate limit that
+    quietly reverts to its default is the better failure.
+    """
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        return int(raw.strip())
+    except ValueError:
+        logger.warning(
+            "Ignoring %s=%r: not an integer. Using the default of %s.", name, raw, default
+        )
+        return default
 
 
 # Per-IP rate limiting. /screen is unauthenticated and every call spends real Claude
@@ -374,20 +471,41 @@ def _strip_code_fences(text: str) -> str:
 # The numbers are sized for a first-time user exploring the app, who will paste
 # several postings back to back, rather than for the narrowest plausible session.
 # Set either limit to 0 to disable that window (useful when running an eval locally).
-RATE_LIMIT_PER_MINUTE = int(os.getenv("SCREEN_RATE_LIMIT_PER_MINUTE", "10"))
-RATE_LIMIT_PER_HOUR = int(os.getenv("SCREEN_RATE_LIMIT_PER_HOUR", "60"))
+RATE_LIMIT_PER_MINUTE = _int_from_env("SCREEN_RATE_LIMIT_PER_MINUTE", 10)
+RATE_LIMIT_PER_HOUR = _int_from_env("SCREEN_RATE_LIMIT_PER_HOUR", 60)
+
+# A ceiling on how many addresses the log tracks. Ageing entries out is no bound at
+# all against a caller rotating a forged header, since every new value is a fresh key
+# with a fresh timestamp. When the dict goes over, the least-recently-seen addresses
+# are evicted first: they are the ones furthest from hitting a limit anyway.
+MAX_TRACKED_IPS = 10_000
 
 _request_log: dict[str, deque[float]] = defaultdict(deque)
+_request_log_lock = threading.Lock()
 
 
 def _client_ip(request: Request) -> str:
-    """Best-effort client address. Vercel sets x-forwarded-for; uvicorn sets neither."""
-    forwarded = request.headers.get("x-forwarded-for")
+    """Best-effort client address, preferring the headers a caller cannot forge.
+
+    x-forwarded-for is client-appendable: whatever the caller sends arrives on the
+    left and the proxy appends the address it actually saw on the right, so the
+    leftmost token is the attacker's own choice of rate-limit bucket. Vercel's
+    x-vercel-forwarded-for and x-real-ip are both set at the edge and overwrite
+    anything inbound, so they come first; failing those, the rightmost
+    x-forwarded-for entry is the closest thing to the real peer. Running under bare
+    uvicorn there are no proxy headers at all and request.client is the truth.
+    """
+    for header in ("x-vercel-forwarded-for", "x-real-ip"):
+        value = (request.headers.get(header) or "").strip()
+        if value:
+            return value
+    forwarded = [
+        part.strip()
+        for part in (request.headers.get("x-forwarded-for") or "").split(",")
+        if part.strip()
+    ]
     if forwarded:
-        return forwarded.split(",")[0].strip()
-    real_ip = request.headers.get("x-real-ip")
-    if real_ip:
-        return real_ip.strip()
+        return forwarded[-1]
     return request.client.host if request.client else "unknown"
 
 
@@ -401,29 +519,44 @@ def _enforce_rate_limit(request: Request) -> None:
     now = time.monotonic()
     ip = _client_ip(request)
 
-    # Drop IPs whose most recent request has aged out, so the dict cannot grow without
-    # bound across the lifetime of a warm instance.
-    for known_ip in [k for k, times in _request_log.items() if times and now - times[-1] > longest]:
-        del _request_log[known_ip]
+    # screen() is a sync def, so FastAPI runs it in the threadpool and two requests can
+    # be inside this function at once. Unguarded, the reaper's del races another
+    # thread's insert (KeyError), and iterating the dict while another thread adds a key
+    # raises RuntimeError. The critical section is a few microseconds of dict work, so
+    # one process-wide lock costs nothing worth measuring.
+    with _request_log_lock:
+        # Drop IPs whose most recent request has aged out, so the dict does not grow
+        # without bound across the lifetime of a warm instance.
+        for known_ip in [
+            k for k, times in list(_request_log.items()) if times and now - times[-1] > longest
+        ]:
+            del _request_log[known_ip]
 
-    seen = _request_log[ip]
-    while seen and now - seen[0] > longest:
-        seen.popleft()
-
-    for seconds, limit in active:
-        in_window = sum(1 for stamp in seen if now - stamp <= seconds)
-        if in_window >= limit:
-            retry_after = int(seconds - (now - seen[-in_window])) + 1
-            logger.warning(
-                "Rate limit hit: ip=%s window=%ss limit=%s", ip, int(seconds), limit
+        if len(_request_log) > MAX_TRACKED_IPS:
+            by_last_seen = sorted(
+                _request_log, key=lambda k: _request_log[k][-1] if _request_log[k] else 0.0
             )
-            raise HTTPException(
-                status_code=429,
-                detail="Too many screening requests. Please wait a moment and try again.",
-                headers={"Retry-After": str(max(retry_after, 1))},
-            )
+            for known_ip in by_last_seen[: len(_request_log) - MAX_TRACKED_IPS]:
+                del _request_log[known_ip]
 
-    seen.append(now)
+        seen = _request_log[ip]
+        while seen and now - seen[0] > longest:
+            seen.popleft()
+
+        for seconds, limit in active:
+            in_window = sum(1 for stamp in seen if now - stamp <= seconds)
+            if in_window >= limit:
+                retry_after = int(seconds - (now - seen[-in_window])) + 1
+                logger.warning(
+                    "Rate limit hit: ip=%s window=%ss limit=%s", ip, int(seconds), limit
+                )
+                raise HTTPException(
+                    status_code=429,
+                    detail="Too many screening requests. Please wait a moment and try again.",
+                    headers={"Retry-After": str(max(retry_after, 1))},
+                )
+
+        seen.append(now)
 
 
 @app.get("/health")
@@ -438,15 +571,48 @@ def screen(request: ScreenRequest, http_request: Request):
     if not request.job_description.strip():
         raise HTTPException(status_code=400, detail="job_description must not be empty.")
 
+    if len(request.job_description) > MAX_JOB_DESCRIPTION_CHARS:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Job description is too long (max {MAX_JOB_DESCRIPTION_CHARS:,} characters)."
+            ),
+        )
+
     # Ask the model, then parse and validate. If the output isn't valid JSON, or doesn't
-    # match ScreenResult, retry once before giving up.
+    # match ScreenResult, retry once before giving up. Every detail string below is
+    # written for the user: the frontend renders it verbatim, and /screen is
+    # unauthenticated, so upstream exception text stays in the server log.
     last_error: Exception | None = None
+    max_tokens = MODEL_MAX_TOKENS
     for _ in range(2):
         try:
-            raw = _call_model(request.job_description)
-        except anthropic.APIError as exc:
+            raw = _call_model(request.job_description, max_tokens=max_tokens)
+        except TruncatedModelResponse as exc:
+            logger.warning("Truncated model response: %s", exc)
+            last_error = exc
+            max_tokens = MODEL_MAX_TOKENS_RETRY
+            continue
+        except anthropic.APITimeoutError as exc:
+            logger.warning("Claude API timed out: %s", exc)
             raise HTTPException(
-                status_code=502, detail=f"Upstream Claude API error: {exc}"
+                status_code=504,
+                detail="Screening took too long to come back. Please try again.",
+            ) from exc
+        except anthropic.RateLimitError as exc:
+            # Retryable, so 429 rather than 502: a 502 tells the client the request was
+            # bad when in fact it was only early.
+            logger.warning("Claude API rate limit: %s", exc)
+            raise HTTPException(
+                status_code=429,
+                detail="The screening service is busy. Please wait a moment and try again.",
+                headers={"Retry-After": "30"},
+            ) from exc
+        except anthropic.APIError as exc:
+            logger.exception("Claude API error")
+            raise HTTPException(
+                status_code=502,
+                detail="Screening is unavailable right now. Please try again in a moment.",
             ) from exc
 
         try:
@@ -456,7 +622,8 @@ def screen(request: ScreenRequest, http_request: Request):
             last_error = exc
             continue
 
+    logger.error("No valid screening result after a retry: %s", last_error)
     raise HTTPException(
         status_code=502,
-        detail=f"Model did not return a valid screening result after a retry: {last_error}",
+        detail="Screening came back in a form we could not read. Please try again.",
     )
