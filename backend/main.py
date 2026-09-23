@@ -5,7 +5,7 @@ import os
 import re
 import threading
 import time
-from collections import defaultdict, deque
+from collections import OrderedDict, deque
 from typing import Literal
 
 import anthropic
@@ -480,8 +480,18 @@ RATE_LIMIT_PER_HOUR = _int_from_env("SCREEN_RATE_LIMIT_PER_HOUR", 60)
 # are evicted first: they are the ones furthest from hitting a limit anyway.
 MAX_TRACKED_IPS = 10_000
 
-_request_log: dict[str, deque[float]] = defaultdict(deque)
+# Insertion-ordered and reordered on touch, so the least-recently-seen address is
+# always the first key. That makes eviction a popitem rather than a sort of the
+# whole dict, which matters because the case that fills this dict is the same case
+# that floods the endpoint.
+_request_log: "OrderedDict[str, deque[float]]" = OrderedDict()
 _request_log_lock = threading.Lock()
+
+# The age-out sweep walks every tracked address, so it runs on a timer rather than
+# on every request. Between sweeps the size cap is what bounds the dict, and a
+# stale entry costs one deque of floats.
+_SWEEP_INTERVAL_SECONDS = 60.0
+_last_sweep = 0.0
 
 
 def _client_ip(request: Request) -> str:
@@ -522,24 +532,30 @@ def _enforce_rate_limit(request: Request) -> None:
     # screen() is a sync def, so FastAPI runs it in the threadpool and two requests can
     # be inside this function at once. Unguarded, the reaper's del races another
     # thread's insert (KeyError), and iterating the dict while another thread adds a key
-    # raises RuntimeError. The critical section is a few microseconds of dict work, so
-    # one process-wide lock costs nothing worth measuring.
+    # raises RuntimeError. Everything under this lock is O(1) per request except the
+    # periodic sweep, which is the reason the sweep is periodic: doing an O(n) scan on
+    # every call would serialise the whole endpoint behind the lock exactly when the
+    # dict is largest, turning the defence into the bottleneck.
+    global _last_sweep
     with _request_log_lock:
-        # Drop IPs whose most recent request has aged out, so the dict does not grow
-        # without bound across the lifetime of a warm instance.
-        for known_ip in [
-            k for k, times in list(_request_log.items()) if times and now - times[-1] > longest
-        ]:
-            del _request_log[known_ip]
-
-        if len(_request_log) > MAX_TRACKED_IPS:
-            by_last_seen = sorted(
-                _request_log, key=lambda k: _request_log[k][-1] if _request_log[k] else 0.0
-            )
-            for known_ip in by_last_seen[: len(_request_log) - MAX_TRACKED_IPS]:
+        if now - _last_sweep > _SWEEP_INTERVAL_SECONDS:
+            _last_sweep = now
+            for known_ip in [
+                k for k, times in _request_log.items() if times and now - times[-1] > longest
+            ]:
                 del _request_log[known_ip]
 
-        seen = _request_log[ip]
+        seen = _request_log.get(ip)
+        if seen is None:
+            seen = _request_log[ip] = deque()
+        else:
+            _request_log.move_to_end(ip)
+
+        # Evict after touching this address, not before, so the caller being
+        # served is the newest key and cannot evict itself. Trimming first left
+        # the dict one over the cap forever.
+        while len(_request_log) > MAX_TRACKED_IPS:
+            _request_log.popitem(last=False)
         while seen and now - seen[0] > longest:
             seen.popleft()
 

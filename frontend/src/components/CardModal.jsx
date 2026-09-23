@@ -155,7 +155,7 @@ export default function CardModal({ card, onChange, onMove, onDelete, onClose })
               <button
                 type="button"
                 onClick={onClose}
-                className="btn-accent btn-block focus-ring flex-1 text-white"
+                className="btn-accent btn-block focus-ring flex-1 text-on-accent"
               >
                 Close
               </button>

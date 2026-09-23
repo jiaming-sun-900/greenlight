@@ -137,7 +137,7 @@ export default function Screener({ nav, screening, onAddToTracker }) {
           <button
             type="button"
             onClick={analyze}
-            className="btn-accent btn-pill focus-ring text-white"
+            className="btn-accent btn-pill focus-ring text-on-accent"
             disabled={jobDescription.trim().length === 0 || overLimit}
           >
             Analyze
@@ -198,7 +198,7 @@ function ResultView({ draft, onChange, onAdd, error, onDismissError }) {
         <button
           type="button"
           onClick={onAdd}
-          className={"btn-accent btn-block focus-ring block text-white " + MEASURE}
+          className={"btn-accent btn-block focus-ring block text-on-accent " + MEASURE}
         >
           Add to Tracker →
         </button>

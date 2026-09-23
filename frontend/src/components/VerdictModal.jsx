@@ -231,7 +231,7 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="btn-accent btn-block focus-ring w-full text-white"
+            className="btn-accent btn-block focus-ring w-full text-on-accent"
           >
             Close
           </button>

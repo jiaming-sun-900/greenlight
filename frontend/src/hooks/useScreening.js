@@ -70,7 +70,9 @@ export default function useScreening() {
   const [error, setError] = useState(null);
   const inFlight = useRef(null);
 
-  // An orphaned request still bills a Claude call for a result nobody reads.
+  // This hook lives in App, so the cleanup only fires when the app itself goes
+  // away. The abort that earns its keep is the one in analyze() below, which
+  // drops a superseded request rather than paying for a result nobody reads.
   useEffect(() => () => inFlight.current?.abort(), []);
 
   const analyze = useCallback(async () => {
@@ -112,8 +114,9 @@ export default function useScreening() {
       setDraft(toDraft(await response.json()));
     } catch (err) {
       if (controller.signal.aborted) {
-        // Either the view unmounted or the request timed out. An unmount has no
-        // one left to tell; a timeout does.
+        // Aborted, but by whom. If this controller is still the current one the
+        // timeout fired and the user is owed an explanation; if it is not, they
+        // pressed Cancel or started a new analysis, and both already said so.
         if (inFlight.current === controller) {
           setError("That took too long. The backend did not answer in time.");
         }

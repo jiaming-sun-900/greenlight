@@ -107,7 +107,7 @@ Five columns, left to right:
 4. **Offer** - Received an offer
 5. **Closed** - Rejected, withdrawn, or expired
 
-Cards can be dragged between any columns freely. A mouse drag starts after 6px of movement, so a click still opens the card; a touch drag starts after a 200ms hold, so a swipe scrolls the column instead of picking a card up. The whole column is the drop target, header included, and dropping a card back in the column it came from is a no-op rather than a rewrite of the whole board.
+Columns share the row evenly when there is space and stop shrinking at 224px, which is the width that still fits all five stages on a 13 inch laptop; narrower than that the row scrolls sideways. Cards can be dragged between any columns freely. A mouse drag starts after 6px of movement, so a click still opens the card; a touch drag starts after a 200ms hold, so a swipe scrolls the column instead of picking a card up. The whole column is the drop target, header included, and dropping a card back in the column it came from is a no-op rather than a rewrite of the whole board.
 
 ### Job Card (front face)
 
@@ -398,9 +398,9 @@ otherwise render a yellow badge next to the worst possible priority.
 
 - Clean, minimal aesthetic. Lots of white space.
 - Accent colors tied to verdict only, and always as a fill/foreground **pair** rather than two loose values: `good`, `warn`, `bad`, `urgent`, `neutral`. Each pair has a light and a dark value.
-- Primary font: Inter or system-ui.
+- Inter throughout, with one exception: the `h1` of each view is set in Newsreader, the serif from jiaming-sun-900.github.io. Display tier only; a serif is wrong for 12px chips and its figures are not tabular.
 - The traffic light / signal metaphor should be present but not overdone. One clear icon or badge per verdict is enough.
-- **Light and dark themes, both first class.** Every colour is a semantic token in the `@theme` block of `frontend/src/index.css`, redefined once under `.dark`; no component carries a `dark:` utility or names a literal colour. A sun/moon switch sits beside the view toggle. The default follows the operating system and keeps following it until the user picks a side, and that choice is remembered. An inline script in `index.html` applies the class before first paint so a dark-mode user never sees a white flash. Both themes meet WCAG AA on every visible text node. See CLAUDE.md > Surfaces and dark mode for the token list and the rules.
+- **Light and dark themes, both first class**, anchored on ivory `#f0eee6` and ink `#1f1e1d` and containing no pure white or pure black. Every colour is a semantic token in the `@theme` block of `frontend/src/index.css`, redefined once under `.dark`; no component carries a `dark:` utility or names a literal colour. Switching cross-fades over 500ms. A sun/moon switch sits beside the view toggle. The default follows the operating system and keeps following it until the user picks a side, and that choice is remembered. An inline script in `index.html` applies the class before first paint so a dark-mode user never sees a white flash. Both themes meet WCAG AA on every visible text node. See CLAUDE.md > Surfaces and dark mode for the token list and the rules.
 
 ---
 

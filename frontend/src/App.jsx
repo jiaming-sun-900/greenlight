@@ -30,11 +30,21 @@ export default function App() {
 
   const clearHighlight = useCallback(() => setHighlightId(null), []);
 
+  // Leaving the board drops the "just added" ring, so coming back later does
+  // not light up a card added minutes ago. Done here, in the event that causes
+  // it, rather than as an unmount cleanup inside the tracker: a cleanup with a
+  // side effect also runs on StrictMode's dev double-invoke, which cleared the
+  // ring on the very mount that was meant to show it.
+  const changeTab = useCallback((tab) => {
+    setActiveTab(tab);
+    if (tab !== "tracker") setHighlightId(null);
+  }, []);
+
   // There is no app header: each view owns its own title row, and the view
   // toggle rides along in it.
   const nav = {
     activeTab,
-    onTabChange: setActiveTab,
+    onTabChange: changeTab,
     trackedCount: cards.length,
     isDark,
     onToggleTheme,
@@ -62,7 +72,7 @@ export default function App() {
             onUpdateCard={updateCard}
             onDeleteCard={deleteCard}
             onMoveCard={moveCard}
-            onNavigateToScreener={() => setActiveTab("screener")}
+            onNavigateToScreener={() => changeTab("screener")}
             highlightId={highlightId}
             onHighlightShown={clearHighlight}
           />

@@ -25,7 +25,7 @@ function Column({ column, cards, onOpenCard, highlightId }) {
       ref={setNodeRef}
       aria-label={column.label}
       className={
-        "flex min-h-[22rem] w-72 shrink-0 flex-col rounded-2xl border-2 bg-surface shadow-sm transition-colors md:min-h-0 " +
+        "flex min-h-[22rem] min-w-56 flex-1 flex-col rounded-2xl border-2 bg-surface shadow-sm transition-colors md:min-h-0 " +
         (isOver ? "border-accent/40" : "border-border")
       }
     >
@@ -36,7 +36,13 @@ function Column({ column, cards, onOpenCard, highlightId }) {
             {cards.length}
           </span>
         </div>
-        <p className="mt-0.5 text-label text-muted">{column.hint}</p>
+        {/* Two lines reserved whether or not the hint needs them. At the
+            narrow end of the range "Rejected, withdrawn, or expired" wraps and
+            the others do not, which started every column's cards at a
+            different height. */}
+        <p className="mt-0.5 min-h-[2.375rem] text-label text-muted">
+          {column.hint}
+        </p>
       </header>
 
       <div
@@ -80,7 +86,7 @@ function EmptyBoard({ onNavigateToScreener }) {
       <button
         type="button"
         onClick={onNavigateToScreener}
-        className="btn-accent btn-pill focus-ring mt-2 text-white"
+        className="btn-accent btn-pill focus-ring mt-2 text-on-accent"
       >
         Screen a job posting
       </button>
@@ -145,6 +151,9 @@ export default function Tracker({
 }) {
   const [openId, setOpenId] = useState(null);
   const [draggingId, setDraggingId] = useState(null);
+  // Columns are elastic now, so the overlay has to copy the real card's width
+  // rather than assume one.
+  const [draggingWidth, setDraggingWidth] = useState(null);
 
   // A click must not be read as a drag, or cards could never be opened. Touch
   // gets its own sensor with a hold delay instead: the pointer sensor would
@@ -157,16 +166,11 @@ export default function Tracker({
     })
   );
 
-  // Fade the "just added" ring after a beat. The cleanup also clears the id, so
-  // switching views inside those 2.5s does not leave a stale highlight waiting
-  // to fire the next time the board is opened.
+  // Fade the "just added" ring after a beat.
   useEffect(() => {
-    if (!highlightId) return;
+    if (!highlightId) return undefined;
     const timer = setTimeout(onHighlightShown, 2500);
-    return () => {
-      clearTimeout(timer);
-      onHighlightShown();
-    };
+    return () => clearTimeout(timer);
   }, [highlightId, onHighlightShown]);
 
   const byColumn = useMemo(() => {
@@ -220,7 +224,10 @@ export default function Tracker({
           )}
           <DndContext
             sensors={sensors}
-            onDragStart={(event) => setDraggingId(event.active.id)}
+            onDragStart={(event) => {
+              setDraggingId(event.active.id);
+              setDraggingWidth(event.active.rect.current.initial?.width ?? null);
+            }}
             onDragCancel={() => setDraggingId(null)}
             onDragEnd={handleDragEnd}
           >
@@ -228,8 +235,15 @@ export default function Tracker({
                 scrolls sideways, which is what makes a five-stage Kanban usable
                 on a phone. Momentum scrolling only, no snap points, since snap
                 fights a drag in progress. */}
+            {/* Elastic columns with a floor, not a fixed width. The floor is
+                224px, which is the narrowest a card still reads at and is
+                chosen so all five stages fit on a 13 inch laptop rather than
+                the board scrolling by a few dozen pixels. Wider screens share
+                the row evenly; a tablet or phone falls below the floor and the
+                row scrolls sideways, which is what keeps five stages usable
+                there. */}
             <div className="overflow-x-auto overscroll-x-contain pb-2 md:min-h-0 md:flex-1">
-              <div className="flex min-w-max gap-4 md:h-full">
+              <div className="flex gap-4 md:h-full">
                 {COLUMNS.map((column) => (
                   <Column
                     key={column.id}
@@ -244,7 +258,11 @@ export default function Tracker({
 
             <DragOverlay dropAnimation={null}>
               {draggingCard ? (
-                <CardFace card={draggingCard} className="w-72 rotate-1 shadow-lg" />
+                <CardFace
+                  card={draggingCard}
+                  className="rotate-1 shadow-lg"
+                  style={draggingWidth ? { width: draggingWidth } : undefined}
+                />
               ) : null}
             </DragOverlay>
           </DndContext>

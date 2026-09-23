@@ -2,6 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 
 const STORAGE_KEY = "greenlight_theme";
 
+// Must match --theme-fade in index.css: the class comes off once the fade it
+// enables has finished.
+const FADE_MS = 500;
+
+// Must match --color-bg in index.css for each theme.
+const CHROME_COLOR = { light: "#f0eee6", dark: "#171615" };
+
 /**
  * Theme state: "light", "dark", or "system".
  *
@@ -42,8 +49,24 @@ export default function useTheme() {
 
   const isDark = theme === "system" ? systemDark : theme === "dark";
 
+  // Cross-fade rather than snap, but only on an actual change. The test is the
+  // DOM's own state, not a "have I run before" ref: the inline script in
+  // index.html has already put the right class on the element by the time this
+  // first runs, and a ref survives StrictMode's double-invoke, so a ref guard
+  // lets the second run fade the app in from the theme it is already in.
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDark);
+    const root = document.documentElement;
+    if (root.classList.contains("dark") === isDark) return undefined;
+    root.classList.add("theme-transition");
+    root.classList.toggle("dark", isDark);
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", CHROME_COLOR[isDark ? "dark" : "light"]);
+    const timer = setTimeout(
+      () => root.classList.remove("theme-transition"),
+      FADE_MS
+    );
+    return () => clearTimeout(timer);
   }, [isDark]);
 
   useEffect(() => {

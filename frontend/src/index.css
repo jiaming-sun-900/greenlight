@@ -11,26 +11,41 @@
      shade directly: every surface goes through one of these, which is what
      lets the whole palette flip under `.dark` in one place. See CLAUDE.md >
      Surfaces and dark mode. */
-  --color-bg: #fafafa; /* the page behind everything */
-  --color-surface: #ffffff; /* panels, columns, cards, modals */
-  --color-sunken: #f9fafb; /* a box inset into a surface */
-  --color-border: #e5e7eb; /* the edge of a surface */
-  --color-border-soft: #f3f4f6; /* a divider inside a surface */
-  --color-hover: #f3f4f6; /* hover fill on a quiet control */
-  --color-overlay: rgb(0 0 0 / 0.4); /* modal backdrop */
+  /* The ground is a warm ivory, not a near-white, and there is no pure white
+     anywhere: #ffffff panels on a dense UI glare, which is the whole reason
+     this palette was rewarmed. Ivory and ink are the two colours of
+     jiaming-sun-900.github.io, so the products read as one hand. */
+  --color-bg: #f0eee6; /* the page behind everything */
+  --color-surface: #fbfaf6; /* panels, columns, cards, modals */
+  --color-sunken: #f4f2ea; /* a box inset into a surface */
+  --color-border: #ded9cb; /* the edge of a surface */
+  --color-border-soft: #e9e5da; /* a divider inside a surface */
+  --color-hover: #e9e5da; /* hover fill on a quiet control */
+  --color-overlay: rgb(31 30 29 / 0.42); /* modal backdrop, ink rather than black */
 
   /* One green across the app: the Greenlight emerald. Solid fills use
      `accent` (emerald 600, dark enough for white text), status dots and the
      brand mark use `accent-dot`, tinted surfaces use `accent-soft`. */
   --color-accent: #059669;
   --color-accent-hover: #047857;
-  /* The gradient a solid accent button is filled with. One step darker than
-     the brand green on purpose: white on #059669 is 3.77:1, under the 4.5:1
-     WCAG AA bar for 16px text, and that green carries the label of every
-     primary action in the app. These two stops run 5.5:1 to 7.7:1. The brand
-     green itself is unchanged and still owns dots, rings, and borders. */
-  --color-accent-fill-top: #047857;
-  --color-accent-fill-bottom: #065f46;
+  /* The body of a solid accent button. Deliberately deeper than the brand
+     green: white on #059669 is 3.77:1, under the 4.5:1 WCAG AA bar for 16px
+     text, and this is the colour under the label of every primary action in
+     the app. These stops run 5.5:1 to 7.7:1.
+
+     Luminosity is added in front of this rather than by lightening it: a
+     specular sheen across the top third, a bright rim, and a bloom outside the
+     button. The sheen fades out well above the label, so the text keeps the
+     base colour underneath it. See `btn-accent`. */
+  --color-accent-fill-top: #6ee7b7;
+  --color-accent-fill-bottom: #34d399;
+  /* The label colour for anything filled with the accent. Dark on bright rather
+     than white on deep: it is the only way the green gets to be luminous, and
+     at 6.4:1 it is also the more readable of the two. */
+  --color-on-accent: #043d2d;
+  /* The cool edge of the fill. A single-hue gradient reads as flat plastic; a
+     few degrees of drift towards teal is what makes it read as a material. */
+  --color-accent-fill-edge: #5eead4;
   --color-accent-dot: #10b981;
   --color-accent-soft: #d1fae5;
   /* Halo color for pressed accent buttons. Lighter than the fill on purpose:
@@ -41,27 +56,27 @@
   /* Two text grays, no more (see CLAUDE.md > Text color). `ink` is body copy
      and anything a reader parses word by word; `muted` is passive metadata.
      Headings keep `--color-text`. Nothing here is pure black or pure white. */
-  --color-text: #111111;
-  --color-ink: #1f2937;
-  --color-muted: #4b5563;
+  --color-text: #1f1e1d;
+  --color-ink: #2e2c28;
+  --color-muted: #5f5b52;
 
   /* ---- Status pairs ------------------------------------------------------
      Each is a fill plus the only foreground that is guaranteed readable on
      it, in both themes. Never mix a fill from one pair with a foreground
      from another. */
-  --color-good-bg: #d1fae5;
-  --color-good-fg: #064e3b;
-  --color-warn-bg: #fef9c3;
-  --color-warn-fg: #713f12;
-  --color-bad-bg: #fee2e2;
-  --color-bad-fg: #7f1d1d;
-  --color-urgent-bg: #ffedd5;
-  --color-urgent-fg: #9a3412;
-  --color-neutral-bg: #f3f4f6;
-  --color-neutral-fg: #1f2937;
+  --color-good-bg: #d6f2e2;
+  --color-good-fg: #0a4535;
+  --color-warn-bg: #f7eec4;
+  --color-warn-fg: #6b4512;
+  --color-bad-bg: #f7dfd8;
+  --color-bad-fg: #7a231c;
+  --color-urgent-bg: #fae4cd;
+  --color-urgent-fg: #8f3a14;
+  --color-neutral-bg: #e9e5da;
+  --color-neutral-fg: #2e2c28;
   /* One step stronger than `hover`, for a control that is selected rather
      than merely pointed at. */
-  --color-selected: #e5e7eb;
+  --color-selected: #ded9cb;
 
   /* Status dots and the 4px rule down a card's left edge. Deeper than the
      pastel fills, which are almost invisible as a rule. */
@@ -78,9 +93,20 @@
   --color-danger: #dc2626;
   --color-danger-fill: #dc2626;
   --color-danger-fill-hover: #b91c1c;
-  --color-danger-soft: #fef2f2;
+  --color-danger-soft: #f8ebe6;
+
+  /* The view toggle's track: a shallow well, so the gradient runs dark to light
+     and a bright lip catches the bottom edge. */
+  --color-track-top: rgb(214 208 191 / 0.78);
+  --color-track-bottom: rgb(251 250 246 / 0.62);
+  --color-track-lip: rgb(255 255 255 / 0.85);
+  --color-track-rim: rgb(255 255 255 / 0.55);
 
   --font-sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Display only. Everything at `text-title` and below stays on Inter: a serif
+     at 12 to 14px goes mushy in the chips and the counts, and its figures are
+     not tabular, which the column counts and the char count rely on. */
+  --font-display: Newsreader, Georgia, "Times New Roman", serif;
 
   /* Font size hierarchy (see CLAUDE.md > Typography scale).
      Five tiers only. Use these tokens instead of ad hoc text-xs / text-sm /
@@ -101,6 +127,12 @@
   /* Icon glyph sizes. Deliberately outside the type scale: decorative glyphs
      are artwork, and sizing them should not borrow a text tier. */
   --icon-lg: 40px;
+
+  /* How long ground and ink take to trade places, and on what curve. Same
+     values as jiaming-sun-900.github.io. Fast enough not to feel broken, slow
+     enough that the room changes light rather than a bulb being switched. */
+  --theme-fade: 500ms;
+  --theme-ease: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 /* ---- Dark theme -----------------------------------------------------------
@@ -108,17 +140,19 @@
    there is no `dark:` utility anywhere in the app: if a surface is named
    semantically it flips for free, and if it is not, that is the bug.
 
-   The greys are blue-leaning rather than neutral, which reads as a deliberate
-   surface rather than as a screen that failed to light up, and nothing is pure
-   black: #000 against light text vibrates at these sizes. */
+   Warm, for the same reason the light theme is: these are the light theme's two
+   colours swapped over, so the ivory becomes the text and the ink becomes the
+   ground. A cool blue-grey dark next to a warm ivory light reads as two
+   different products. Nothing is pure black either: #000 under light text
+   vibrates at these sizes. */
 .dark {
-  --color-bg: #0e1014;
-  --color-surface: #161a20;
-  --color-sunken: #1d222a;
-  --color-border: #2b313c;
-  --color-border-soft: #212730;
-  --color-hover: #242b36;
-  --color-overlay: rgb(0 0 0 / 0.65);
+  --color-bg: #171615;
+  --color-surface: #211f1d;
+  --color-sunken: #292724;
+  --color-border: #3a3733;
+  --color-border-soft: #2e2c29;
+  --color-hover: #302d29;
+  --color-overlay: rgb(10 9 9 / 0.68);
 
   /* The fill stays the brand emerald so the primary button is the same object
      in both themes. Only the halo and the focus ring brighten, because both
@@ -126,21 +160,21 @@
   --color-accent-soft: #0c3b2e;
   --color-focus: #10b981;
 
-  --color-text: #f4f6f8;
-  --color-ink: #d5dae2;
-  --color-muted: #98a2b3;
+  --color-text: #f0eee6;
+  --color-ink: #ded9cd;
+  --color-muted: #a29c90;
 
-  --color-good-bg: #0c3b2e;
-  --color-good-fg: #6ee7b7;
-  --color-warn-bg: #3b3210;
-  --color-warn-fg: #fde047;
-  --color-bad-bg: #451a1a;
-  --color-bad-fg: #fca5a5;
-  --color-urgent-bg: #43260f;
-  --color-urgent-fg: #fdba74;
-  --color-neutral-bg: #242b36;
-  --color-neutral-fg: #d5dae2;
-  --color-selected: #333b49;
+  --color-good-bg: #0e3a2d;
+  --color-good-fg: #7fe9c0;
+  --color-warn-bg: #3a3113;
+  --color-warn-fg: #f5da5f;
+  --color-bad-bg: #432020;
+  --color-bad-fg: #f2a9a2;
+  --color-urgent-bg: #402816;
+  --color-urgent-fg: #f5bc85;
+  --color-neutral-bg: #302d29;
+  --color-neutral-fg: #ded9cd;
+  --color-selected: #403c36;
 
   --color-dot-yellow: #facc15;
   --color-dot-red: #f87171;
@@ -149,7 +183,70 @@
   --color-edge-red: #ef4444;
 
   --color-danger: #f87171;
-  --color-danger-soft: #3b1a1a;
+  --color-danger-soft: #3a211d;
+
+  /* The well inverts: on a dark page a recess is darker than its surround, not
+     lighter, and the lip that catches the light drops to a faint white. */
+  --color-track-top: rgb(9 8 7 / 0.8);
+  --color-track-bottom: rgb(48 45 41 / 0.6);
+  --color-track-rim: rgb(255 255 255 / 0.1);
+  --color-track-lip: rgb(255 255 255 / 0.1);
+}
+
+/* --- Theme transition ------------------------------------------------------
+
+   The class is added by hooks/useTheme.js for the length of the fade and then
+   taken off again, so the app pays for these transitions only while the theme
+   is actually changing and not on every hover for the rest of the session. It
+   is also never present on first paint, so loading into dark does not fade in
+   from light.
+
+   Every colour property is listed because in this app the theme is not just a
+   background: borders, dividers, chips and the glass shadows all move at once,
+   and anything left out would snap while the rest crossed. */
+@media not (prefers-reduced-motion: reduce) {
+  html.theme-transition,
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    transition:
+      background-color var(--theme-fade) var(--theme-ease),
+      border-color var(--theme-fade) var(--theme-ease),
+      color var(--theme-fade) var(--theme-ease),
+      fill var(--theme-fade) var(--theme-ease),
+      box-shadow var(--theme-fade) var(--theme-ease),
+      outline-color var(--theme-fade) var(--theme-ease),
+      /* `transition` is one property, so this rule replaces whatever a
+         component declared. Carrying transform at its own speed keeps the view
+         toggle's pill sliding if the two switches are used together, instead of
+         snapping for the length of the fade. */
+      transform 0.12s ease !important;
+  }
+}
+
+/* The sun and moon are stacked and cross-faded rather than swapped, because a
+   glyph that changes in one frame in the middle of a half-second fade is the
+   one thing in the transition that still reads as a jump. They rotate as they
+   go, on the fade's own curve. */
+@utility theme-glyph {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    opacity var(--theme-fade) var(--theme-ease),
+    transform var(--theme-fade) var(--theme-ease);
+}
+
+/* The serif that carries a view's h1. Newsreader is optical-size aware, so the
+   axis is set to roughly the size this actually renders at; left at the text
+   master the strokes thin out and the title reads underweight next to Inter.
+   The slight negative tracking matches `text-display`'s own. */
+@utility display-serif {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 36;
+  letter-spacing: -0.015em;
 }
 
 /* Decorative glyph sizing (emoji, symbol characters). */
@@ -211,43 +308,73 @@ body {
   font-weight: 500;
 }
 
-/* Accent buttons. A shallow gradient plus a hairline top highlight reads as a
-   physical surface without tipping into full skeuomorphism. Both gradient
-   stops are `accent` or darker, because these carry white labels: the softer
-   emerald is used only for the glow, which sits outside the button and so has
-   no contrast obligation. The glow is faint at rest and blooms on press. */
-@utility btn-accent {
-  background-image: linear-gradient(
-    to bottom,
-    var(--color-accent-fill-top),
-    var(--color-accent-fill-bottom)
-  );
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.22),
-    0 1px 2px rgb(4 47 46 / 0.3),
-    0 2px 10px -4px var(--color-accent-glow);
-  transition:
-    box-shadow 0.2s ease,
-    transform 0.1s ease,
-    filter 0.2s ease;
+/* Accent buttons, as a piece of tinted glass rather than a painted rectangle.
+   Four layers, back to front:
 
+     1. the body, a deep emerald gradient drifting a few degrees towards teal
+     2. a specular sheen across the top third, stopping well short of the label
+     3. a bright inner rim, brightest at the top where light would catch it
+     4. a coloured bloom on the page beneath
+
+   All of the luminosity lives in 2 to 4, which is the point: the label sits on
+   layer 1 only, so the button can read as bright glass while white text on it
+   stays at 5.5:1. Lightening the body instead would put it at 3.8:1. */
+@utility btn-accent {
+  background-image:
+    linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 0.55) 0%,
+      rgb(255 255 255 / 0.18) 30%,
+      rgb(255 255 255 / 0) 55%
+    ),
+    linear-gradient(
+      160deg,
+      var(--color-accent-fill-edge) 0%,
+      var(--color-accent-fill-top) 42%,
+      var(--color-accent-fill-bottom) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.75),
+    inset 0 0 0 1px rgb(255 255 255 / 0.1),
+    inset 0 -10px 16px -12px rgb(2 30 24 / 0.55),
+    0 1px 2px rgb(2 44 34 / 0.28),
+    0 10px 26px -14px var(--color-accent-glow);
+  transition:
+    box-shadow 0.22s ease,
+    transform 0.12s cubic-bezier(0.2, 0, 0.2, 1),
+    filter 0.18s ease;
+
+  /* Hover lifts the glass off the page. The shadow work alone was close to
+     invisible against a light ground, which is why this also brightens: on a
+     pale page the only reliable signal is the fill itself moving. Brightness
+     raises the whole surface evenly, so the label's contrast rises with it
+     rather than being eaten. */
   &:hover:not(:disabled) {
-    filter: brightness(1.06);
+    transform: translateY(-1px);
+    filter: brightness(1.07) saturate(1.06);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.22),
-      0 2px 4px rgb(4 47 46 / 0.3),
-      0 4px 18px -4px var(--color-accent-glow);
+      inset 0 1px 0 rgb(255 255 255 / 0.55),
+      inset 0 0 0 1px rgb(255 255 255 / 0.2),
+      inset 0 -10px 16px -12px rgb(2 30 24 / 0.45),
+      0 4px 8px rgb(2 44 34 / 0.18),
+      0 18px 40px -18px var(--color-accent-glow);
   }
 
+  /* Press pushes it into the page: it sinks past where it started, dims, and
+     the bloom collapses into a tight halo. The three move together, so a click
+     has a bottom to it rather than just a colour change. */
   &:active:not(:disabled) {
-    transform: translateY(1px);
-    filter: brightness(0.97);
-    /* The halo tightens onto the button and intensifies, so a press reads as
-       the surface pushing into the page rather than lifting off it. */
+    transform: translateY(1px) scale(0.988);
+    filter: brightness(0.93) saturate(1.02);
+    transition:
+      box-shadow 0.06s ease,
+      transform 0.06s ease,
+      filter 0.06s ease;
     box-shadow:
-      inset 0 1px 3px rgb(4 47 46 / 0.35),
-      0 0 0 5px color-mix(in oklab, var(--color-accent-glow) 55%, transparent),
-      0 1px 12px -2px var(--color-accent-glow);
+      inset 0 2px 6px rgb(2 30 24 / 0.5),
+      inset 0 0 0 1px rgb(255 255 255 / 0.08),
+      0 0 0 3px color-mix(in oklab, var(--color-accent-glow) 35%, transparent),
+      0 1px 4px rgb(2 44 34 / 0.2);
   }
 
   /* Readable rather than merely dimmed: white on gray-300 is about 1.5:1, so
@@ -262,46 +389,75 @@ body {
   }
 }
 
-/* View toggle. The track is a shallow well and the pill a raised cap: the same
-   gradient + inset language as the buttons, one notch quieter. */
+/* View toggle. The track is a frosted well and the pill a cap of the same glass
+   as the buttons, one notch quieter. The blur is what makes the track read as a
+   material with depth rather than as a grey rectangle. */
 @utility toggle-track {
   background-image: linear-gradient(
     to bottom,
     var(--color-track-top),
     var(--color-track-bottom)
   );
+  /* The fills above are translucent on purpose: a blur with an opaque surface
+     over it is just an expensive grey. Saturation is pushed well past 1 so the
+     ground showing through reads as tinted glass rather than as a hole. */
+  backdrop-filter: blur(18px) saturate(1.9);
   box-shadow:
-    inset 0 1px 2px rgb(17 24 39 / 0.1),
-    inset 0 -1px 0 var(--color-track-lip);
+    inset 0 2px 5px rgb(31 30 29 / 0.16),
+    inset 0 0 0 1px var(--color-track-rim),
+    inset 0 -2px 0 var(--color-track-lip),
+    0 1px 0 rgb(255 255 255 / 0.5);
+  transition:
+    box-shadow 0.2s ease,
+    filter 0.2s ease,
+    border-color 0.2s ease;
 }
 
-@theme {
-  --color-track-top: #e6e8ec;
-  --color-track-bottom: #f5f6f8;
-  --color-track-lip: rgb(255 255 255 / 0.8);
-}
-
-.dark {
-  /* The well inverts: on a dark page a recess is darker than its surround, not
-     lighter, and the lip that catches the light moves to a faint white. */
-  --color-track-top: #0b0d11;
-  --color-track-bottom: #1a1f27;
-  --color-track-lip: rgb(255 255 255 / 0.06);
+/* Hover on a glass shell: the rim catches more light and the well deepens. */
+@utility toggle-glass-hover {
+  &:hover {
+    box-shadow:
+      inset 0 2px 6px rgb(31 30 29 / 0.2),
+      inset 0 0 0 1px var(--color-track-lip),
+      inset 0 -2px 0 var(--color-track-lip),
+      0 2px 6px -2px rgb(31 30 29 / 0.25),
+      0 1px 0 rgb(255 255 255 / 0.6);
+  }
 }
 
 @utility toggle-pill {
-  background-image: linear-gradient(
-    to bottom,
-    var(--color-accent-fill-top),
-    var(--color-accent-fill-bottom)
-  );
+  background-image:
+    linear-gradient(
+      to bottom,
+      rgb(255 255 255 / 0.6) 0%,
+      rgb(255 255 255 / 0.2) 32%,
+      rgb(255 255 255 / 0) 58%
+    ),
+    linear-gradient(
+      160deg,
+      var(--color-accent-fill-edge) 0%,
+      var(--color-accent-fill-top) 45%,
+      var(--color-accent-fill-bottom) 100%
+    );
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.25),
-    0 1px 2px rgb(4 47 46 / 0.35),
-    0 2px 8px -3px var(--color-accent-glow);
+    inset 0 1px 0 rgb(255 255 255 / 0.75),
+    inset 0 0 0 1px rgb(255 255 255 / 0.12),
+    0 1px 2px rgb(2 44 34 / 0.3),
+    0 6px 16px -8px var(--color-accent-glow);
   transition:
     transform 0.12s ease,
-    box-shadow 0.12s ease;
+    box-shadow 0.18s ease,
+    filter 0.18s ease;
+}
+
+/* The pill lives behind the labels, so its hover is driven from the nav. */
+@utility toggle-pill-hover {
+  filter: brightness(1.06) saturate(1.05);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.5),
+    inset 0 0 0 1px rgb(255 255 255 / 0.18),
+    0 2px 4px rgb(2 44 34 / 0.24),
+    0 10px 22px -10px var(--color-accent-glow);
 }
 
 /* Pressed: the cap sinks a touch and its shadow tightens. */

@@ -23,14 +23,14 @@ export default function ViewToggle({ activeTab, onTabChange, trackedCount = 0 })
     // lets the pill travel by a plain 100% translate.
     <nav
       aria-label="View"
-      className="group relative grid shrink-0 grid-cols-2 justify-items-center toggle-track rounded-full border border-border p-1"
+      className="group relative grid shrink-0 grid-cols-2 justify-items-center toggle-track rounded-full border-2 border-border p-1"
     >
       <span
         aria-hidden
         className="pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
         style={{ transform: `translateX(${activeIndex * 100}%)` }}
       >
-        <span className="toggle-pill group-active:toggle-pill-pressed block h-full w-full rounded-full" />
+        <span className="toggle-pill group-hover:toggle-pill-hover group-active:toggle-pill-pressed block h-full w-full rounded-full" />
       </span>
       {TABS.map((tab) => {
         const isActive = activeTab === tab.id;
@@ -43,7 +43,9 @@ export default function ViewToggle({ activeTab, onTabChange, trackedCount = 0 })
             className={
               "focus-ring relative z-10 flex w-24 items-center justify-center gap-2 rounded-full px-3 py-1.5 " +
               "text-body font-medium transition-colors duration-200 sm:w-28 sm:px-4 " +
-              (isActive ? "text-white" : "text-muted hover:text-ink")
+              (isActive
+                ? "text-on-accent"
+                : "text-muted hover:bg-hover hover:text-ink active:scale-[0.97]")
             }
           >
             {tab.label}
@@ -52,7 +54,7 @@ export default function ViewToggle({ activeTab, onTabChange, trackedCount = 0 })
                 aria-label={`${trackedCount} tracked`}
                 className={
                   "rounded-full px-1.5 py-0.5 text-micro tabular-nums transition-colors " +
-                  (isActive ? "bg-white/25 text-white" : "bg-selected text-ink")
+                  (isActive ? "bg-on-accent/15 text-on-accent" : "bg-selected text-ink")
                 }
               >
                 {trackedCount}

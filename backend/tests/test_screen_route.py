@@ -246,7 +246,55 @@ class TestRateLimiting:
                 json={"job_description": POSTING},
                 headers={"x-real-ip": f"198.51.100.{i}"},
             )
-        assert len(main._request_log) <= main.MAX_TRACKED_IPS + 1
+        # Exactly the cap, not the cap plus one. Evicting before recording the
+        # current caller leaves the log permanently one entry over.
+        assert len(main._request_log) == main.MAX_TRACKED_IPS
+
+    def test_eviction_drops_the_least_recently_seen_address(self, client, monkeypatch):
+        """A caller who is still active must not be evicted by newer arrivals."""
+        monkeypatch.setattr(main, "MAX_TRACKED_IPS", 3)
+        stub_model(monkeypatch, json.dumps(VALID_RESULT))
+
+        def call(ip):
+            client.post(
+                "/screen",
+                json={"job_description": POSTING},
+                headers={"x-real-ip": ip},
+            )
+
+        for ip in ("203.0.113.1", "203.0.113.2", "203.0.113.3"):
+            call(ip)
+        call("203.0.113.1")  # .1 is now the most recent, .2 the oldest
+        call("203.0.113.4")  # forces one eviction
+
+        assert "203.0.113.1" in main._request_log
+        assert "203.0.113.2" not in main._request_log
+        assert len(main._request_log) == 3
+
+    def test_the_sweep_does_not_run_on_every_request(self, monkeypatch):
+        """The age-out scan is O(n). Running it per request serialises the
+        endpoint behind the lock exactly when the log is largest."""
+        monkeypatch.setattr(main, "RATE_LIMIT_PER_MINUTE", 0)
+        monkeypatch.setattr(main, "RATE_LIMIT_PER_HOUR", 1_000_000)
+        monkeypatch.setattr(main, "_last_sweep", main.time.monotonic())
+
+        swept = []
+        real_items = main._request_log.items
+
+        def counting_items():
+            swept.append(1)
+            return real_items()
+
+        monkeypatch.setattr(main._request_log, "items", counting_items)
+
+        class _Req:
+            def __init__(self, ip):
+                self.headers = {"x-real-ip": ip}
+                self.client = None
+
+        for i in range(50):
+            main._enforce_rate_limit(_Req(f"192.0.2.{i}"))
+        assert swept == [], "the sweep ran inside the per-request path"
 
 
 class _FakeBlock:

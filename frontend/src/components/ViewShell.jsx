@@ -35,7 +35,7 @@ export default function ViewShell({ title, subtitle, nav, children }) {
       >
         <div className="flex flex-col-reverse items-start gap-3 sm:flex-row sm:justify-between sm:gap-6">
           <div className="min-w-0">
-            <h1 className="text-display font-semibold tracking-tight text-text">
+            <h1 className="display-serif text-display font-semibold text-text">
               {title}
             </h1>
             <p className="mt-1 text-body text-muted">{subtitle}</p>
