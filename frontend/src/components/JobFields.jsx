@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
+import CloseGlyph from "./CloseGlyph.jsx";
 
 // Inline-editable fields shared by the screener's right panel and the tracker's
 // card modal, so a job report looks and behaves the same in both places.
@@ -109,14 +110,20 @@ export function DateField({ label, value, onChange }) {
 
 export function ListField({ label, items, onChange, placeholder }) {
   const list = Array.isArray(items) ? items : [];
+  const groupId = useId();
 
   function replace(index, next) {
     onChange(list.map((item, idx) => (idx === index ? next : item)));
   }
 
   return (
-    <div>
-      <span className={LABEL}>{label}</span>
+    // A bare span is not a label, so the group is named for assistive tech and
+    // each row carries its own position. Without this every skill row announced
+    // as an unlabelled edit box.
+    <div role="group" aria-labelledby={groupId}>
+      <span id={groupId} className={LABEL}>
+        {label}
+      </span>
       <ul className="space-y-0.5">
         {list.map((item, index) => (
           <li key={index} className="group flex items-center gap-1.5">
@@ -129,22 +136,18 @@ export function ListField({ label, items, onChange, placeholder }) {
               value={item}
               onChange={(event) => replace(index, event.target.value)}
               placeholder={placeholder}
+              aria-label={`${label} ${index + 1}`}
               className={CONTROL}
             />
+            {/* Revealed on hover, focus, or touch. `opacity-0` alone left this
+                unreachable on a phone, which has no hover to offer. */}
             <button
               type="button"
               onClick={() => onChange(list.filter((_, idx) => idx !== index))}
               aria-label={`Remove ${item || "skill"}`}
-              className="shrink-0 rounded-md p-1.5 text-muted opacity-0 transition-opacity hover:bg-gray-100 hover:text-ink focus:opacity-100 focus-visible:outline-none group-hover:opacity-100"
+              className="focus-ring shrink-0 rounded-md p-1.5 text-muted opacity-0 transition-opacity hover:bg-gray-100 hover:text-ink focus:opacity-100 group-hover:opacity-100 max-md:opacity-100"
             >
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
-                <path
-                  d="M4 4l8 8M12 4l-8 8"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
+              <CloseGlyph size={12} />
             </button>
           </li>
         ))}
@@ -152,7 +155,7 @@ export function ListField({ label, items, onChange, placeholder }) {
       <button
         type="button"
         onClick={() => onChange([...list, ""])}
-        className="mt-1 rounded-md px-2 py-1 text-label font-medium text-muted transition-colors hover:bg-gray-100 hover:text-ink"
+        className="focus-ring mt-1 rounded-md px-2 py-1 text-label font-medium text-muted transition-colors hover:bg-gray-100 hover:text-ink"
       >
         + Add skill
       </button>

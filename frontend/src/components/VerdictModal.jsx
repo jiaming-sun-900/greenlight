@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import VerdictBadge from "./VerdictBadge.jsx";
+import CloseGlyph from "./CloseGlyph.jsx";
+import useDialog from "../hooks/useDialog.js";
 
 // One entry per sub-reason tag returned by the backend.
 //   label   - what was found, as a heading
@@ -69,8 +71,8 @@ const TAGS = {
   contradictory: {
     label: "Contradictory signals in the posting",
     meaning:
-      "Different parts of the posting disagree, often a job-board filter tag against the body text. One of them is wrong.",
-    next: "Trust the body text over the tag, and ask the recruiter which one holds.",
+      "Two explicit statements in the posting directly oppose each other, such as a benefits section promising H-1B sponsorship against a requirement that candidates never need sponsorship. One of them is wrong, so the posting has not actually answered the question.",
+    next: "Ask the recruiter which statement holds for this requisition, and get the answer before a long interview loop.",
   },
   optcpt_future_unstated: {
     label: "OPT/CPT accepted, nothing said about after",
@@ -123,72 +125,61 @@ function RecruiterAsk() {
   }
 
   return (
-    <div className="mt-4 rounded-lg border-2 border-gray-100 px-3.5 py-3">
+    <div className="mt-4 rounded-lg border-2 border-gray-100 bg-gray-50 px-3.5 py-3">
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="text-body font-medium text-ink">Ask before you invest</h3>
         <button
           type="button"
           onClick={copy}
-          className="shrink-0 rounded-md px-2 py-1 text-label font-medium text-muted transition-colors hover:bg-gray-100 hover:text-ink"
+          className="focus-ring shrink-0 rounded-md px-2 py-1 text-label font-medium text-muted transition-colors hover:bg-gray-100 hover:text-ink"
         >
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      <p className="mt-1.5 text-label text-muted">
+      <p className="mt-1.5 text-body text-muted">
         Send this at the recruiter screen, not at the final round. It states
         where you stand now, what you will need later, and asks about this role
         rather than the company.
       </p>
-      <p className="mt-2 text-label italic text-ink">{RECRUITER_SCRIPT}</p>
+      <p className="mt-2 text-body italic text-ink">{RECRUITER_SCRIPT}</p>
     </div>
   );
 }
 
 export default function VerdictModal({ verdict, reasons, onClose }) {
-  // Close on Escape.
-  useEffect(() => {
-    function onKeyDown(e) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
-
+  const { ref, backdropProps } = useDialog({ onClose });
   const list = Array.isArray(reasons) ? reasons : [];
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-      onClick={onClose}
-      role="presentation"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6"
+      {...backdropProps}
     >
+      {/* `max-h-full` plus an internally scrolling body, matching the card
+          modal. Without it a yellow verdict carrying two reasons and the
+          recruiter script overflows a phone, and the footer Close button ends
+          up off screen where nothing can scroll to it. */}
       <div
+        ref={ref}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label="Why this verdict?"
-        className="w-full max-w-md rounded-2xl bg-white shadow-xl"
-        onClick={(e) => e.stopPropagation()}
+        className="flex max-h-full w-full max-w-md flex-col rounded-2xl bg-white shadow-xl focus:outline-none"
       >
-        <div className="flex items-center justify-between border-b-2 border-gray-100 px-5 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b-2 border-gray-100 px-5 py-4">
           <h2 className="text-title font-semibold text-ink">Why this verdict?</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-md p-1 text-muted transition-colors hover:bg-gray-100 hover:text-ink"
+            className="focus-ring rounded-md p-1 text-muted transition-colors hover:bg-gray-100 hover:text-ink"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-              <path
-                d="M4 4l8 8M12 4l-8 8"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
+            <CloseGlyph />
           </button>
         </div>
 
-        <div className="px-5 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           <div className="mb-4">
             <VerdictBadge verdict={verdict} />
             <p className="mt-2 text-body text-ink">{VERDICT_SUMMARY[verdict]}</p>
@@ -203,7 +194,7 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
               {list.map((reason, idx) => (
                 <li
                   key={idx}
-                  className="rounded-lg border border-gray-100 bg-gray-50 px-3.5 py-3"
+                  className="rounded-lg border-2 border-gray-100 bg-gray-50 px-3.5 py-3"
                 >
                   <div className="text-body font-medium text-ink">
                     {labelForTag(reason.tag)}
@@ -220,10 +211,10 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
                   )}
                   {TAGS[reason.tag] && (
                     <>
-                      <p className="mt-2 text-label text-muted">
+                      <p className="mt-2 text-body text-muted">
                         {TAGS[reason.tag].meaning}
                       </p>
-                      <p className="mt-1.5 text-label font-medium text-ink">
+                      <p className="mt-1.5 text-body font-medium text-ink">
                         {TAGS[reason.tag].next}
                       </p>
                     </>
@@ -236,11 +227,11 @@ export default function VerdictModal({ verdict, reasons, onClose }) {
           {list.some((reason) => ASK_TAGS.has(reason.tag)) && <RecruiterAsk />}
         </div>
 
-        <div className="border-t-2 border-gray-100 px-5 py-4">
+        <div className="shrink-0 border-t-2 border-gray-100 px-5 py-4">
           <button
             type="button"
             onClick={onClose}
-            className="w-full btn-accent rounded-lg px-4 py-2.5 text-body font-medium text-white"
+            className="btn-accent btn-block focus-ring w-full text-white"
           >
             Close
           </button>
