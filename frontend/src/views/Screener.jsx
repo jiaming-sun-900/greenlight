@@ -1,17 +1,12 @@
 import { useState } from "react";
 import BrandMark from "../components/BrandMark.jsx";
 import JobDetailFields from "../components/JobFields.jsx";
-import ViewToggle from "../components/ViewToggle.jsx";
+import ViewShell from "../components/ViewShell.jsx";
 import VerdictBadge from "../components/VerdictBadge.jsx";
 import VerdictModal from "../components/VerdictModal.jsx";
 import PriorityChip from "../components/PriorityChip.jsx";
-import { derivePriority } from "../lib/priority.js";
-import { toISODate } from "../lib/dates.js";
-
-// Same-origin in both environments: Vercel serves the API alongside the app, and
-// the Vite dev server proxies /api to the local backend. VITE_SCREEN_ENDPOINT is
-// an escape hatch for pointing the frontend at a backend somewhere else.
-const SCREEN_ENDPOINT = import.meta.env.VITE_SCREEN_ENDPOINT ?? "/api/screen";
+import CloseGlyph from "../components/CloseGlyph.jsx";
+import { MAX_JOB_DESCRIPTION_CHARS } from "../hooks/useScreening.js";
 
 // Panels stretch with the viewport, but prose inside them does not: past roughly
 // 70 characters a line gets hard to track back from. Applied to the text content
@@ -26,119 +21,55 @@ const MEASURE = "w-full max-w-[70ch]";
 // panel edge where it belongs.
 const MEASURE_PADDING = "pr-[max(1.25rem,calc(100%-70ch-1.25rem))]";
 
-/** Shape the backend response into the editable draft the panel works with. */
-function toDraft(data) {
-  const verdict_reasons = Array.isArray(data.verdict_reasons)
-    ? data.verdict_reasons
-    : [];
-  return {
-    verdict: data.verdict,
-    verdict_reasons,
-    priority: data.priority ?? derivePriority(data.verdict, verdict_reasons),
-    position_title: data.position_title ?? "",
-    company_name: data.company_name ?? "",
-    job_functions: data.job_functions ?? "",
-    preferred_skills: Array.isArray(data.preferred_skills)
-      ? data.preferred_skills
-      : [],
-    // The model is asked for YYYY-MM-DD, but normalize anyway so the date input
-    // always has something it can render.
-    deadline: toISODate(data.deadline),
-  };
-}
+const PANEL =
+  "flex min-h-0 flex-col rounded-2xl border-2 border-gray-200 bg-white shadow-sm";
+const PANEL_HEADER =
+  "flex shrink-0 items-center justify-between gap-3 border-b-2 border-gray-100 px-5 py-3";
 
-export default function Screener({ nav, onAddToTracker }) {
-  const [jobDescription, setJobDescription] = useState("");
-  const [draft, setDraft] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+export default function Screener({ nav, screening, onAddToTracker }) {
+  const {
+    jobDescription,
+    setJobDescription,
+    draft,
+    setDraft,
+    loading,
+    error,
+    dismissError,
+    analyze,
+    cancel,
+    reset,
+  } = screening;
 
-  async function handleAnalyze() {
-    const text = jobDescription.trim();
-    if (!text || loading) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(SCREEN_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ job_description: text }),
-      });
-
-      if (!response.ok) {
-        let detail = `Request failed (${response.status}).`;
-        try {
-          const body = await response.json();
-          if (body && body.detail) detail = body.detail;
-        } catch {
-          // response had no/invalid JSON body - keep the status-based message
-        }
-        throw new Error(detail);
-      }
-
-      const data = await response.json();
-      setDraft(toDraft(data));
-    } catch (err) {
-      // Network failure, CORS, or a thrown backend error all land here.
-      setDraft(null);
-      setError(
-        err instanceof Error && err.message
-          ? err.message
-          : "Something went wrong while analyzing this posting."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
+  const length = jobDescription.length;
+  const overLimit = length > MAX_JOB_DESCRIPTION_CHARS;
 
   function handleAdd() {
     onAddToTracker(draft);
-    // Clear the bench so the next posting starts from a blank slate.
-    setJobDescription("");
-    setDraft(null);
+    reset();
   }
 
   return (
-    // Below `md` the panels stack into one column and the page scrolls normally.
-    // From `md` up they sit side by side and the view is pinned to the viewport:
-    // each panel scrolls internally so Analyze never gets pushed off the bottom,
-    // however long the posting is. The panels themselves are fluid; it is the
-    // text inside them that is held to a readable measure (see MEASURE).
-    <div className="mx-auto flex w-full max-w-[1800px] flex-col px-4 pb-6 sm:px-6 md:h-full xl:px-10">
-      {/* Sticky because below `md` the panels stack and the page scrolls as
-          one: the toggle has to stay reachable without scrolling back to the
-          top. From `md` up the view is pinned and only the panels scroll, so
-          nothing ever travels under this row and sticky costs nothing. The
-          negative margins let the blurred backing span the page gutters. */}
-      <header className="sticky top-0 z-20 -mx-4 mb-5 shrink-0 bg-bg/95 px-4 pb-4 pt-6 backdrop-blur sm:-mx-6 sm:px-6 xl:-mx-10 xl:px-10">
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-          <div className="min-w-0">
-            <h1 className="text-display font-semibold tracking-tight text-text">
-              Screen a job posting
-            </h1>
-            <p className="mt-1 text-body text-muted">
-              Paste a job description to check visa eligibility for
-              international students.
-            </p>
-          </div>
-          <ViewToggle {...nav} />
-        </div>
-      </header>
-
+    <ViewShell
+      nav={nav}
+      title="Screen a job posting"
+      subtitle="Paste a job description to check visa eligibility for international students."
+    >
       <div className="grid grid-cols-1 gap-5 md:min-h-0 md:flex-1 md:grid-cols-2">
         {/* Left panel - input */}
-        <section
-          aria-label="Job description input"
-          className="flex min-h-0 flex-col rounded-2xl border-2 border-gray-200 bg-white shadow-sm"
-        >
-          <div className="flex shrink-0 items-center justify-between border-b-2 border-gray-100 px-5 py-3">
+        <section aria-label="Job description input" className={PANEL}>
+          <div className={PANEL_HEADER}>
             <h2 className="text-title font-semibold text-ink">
               Job description
             </h2>
-            <span className="text-micro tabular-nums text-muted">
-              {jobDescription.length.toLocaleString()} chars
+            <span
+              className={
+                "text-micro tabular-nums " +
+                (overLimit ? "font-medium text-red-700" : "text-muted")
+              }
+            >
+              {overLimit
+                ? `${length.toLocaleString()} / ${MAX_JOB_DESCRIPTION_CHARS.toLocaleString()} chars`
+                : `${length.toLocaleString()} chars`}
             </span>
           </div>
           <div className="flex min-h-0 flex-1 rounded-b-2xl bg-white">
@@ -146,8 +77,10 @@ export default function Screener({ nav, onAddToTracker }) {
               value={jobDescription}
               onChange={(e) => setJobDescription(e.target.value)}
               placeholder="Paste a full job description here..."
+              aria-label="Job description"
+              aria-invalid={overLimit || undefined}
               className={
-                "min-h-[300px] w-full resize-none overflow-y-auto bg-transparent pl-5 py-4 " +
+                "min-h-[300px] w-full resize-none overflow-y-auto bg-transparent pl-5 py-5 " +
                 "text-body leading-relaxed text-ink placeholder:text-muted " +
                 "focus:outline-none md:min-h-0 " +
                 MEASURE_PADDING
@@ -157,11 +90,8 @@ export default function Screener({ nav, onAddToTracker }) {
         </section>
 
         {/* Right panel - structured output */}
-        <section
-          aria-label="Analysis result"
-          className="flex min-h-0 flex-col rounded-2xl border-2 border-gray-200 bg-white shadow-sm"
-        >
-          <div className="flex shrink-0 items-center justify-between border-b-2 border-gray-100 px-5 py-3">
+        <section aria-label="Analysis result" className={PANEL}>
+          <div className={PANEL_HEADER}>
             <h2 className="text-title font-semibold text-ink">Analysis</h2>
             <span className="text-micro text-muted">
               {loading ? "Analyzing…" : draft ? "Editable" : "Preview"}
@@ -170,10 +100,19 @@ export default function Screener({ nav, onAddToTracker }) {
 
           {loading ? (
             <LoadingState />
+          ) : draft ? (
+            // A failed retry leaves the analysis the user already has, and may
+            // already have corrected, in place. The failure is reported above
+            // it rather than in place of it.
+            <ResultView
+              draft={draft}
+              onChange={setDraft}
+              onAdd={handleAdd}
+              error={error}
+              onDismissError={dismissError}
+            />
           ) : error ? (
             <ErrorState message={error} />
-          ) : draft ? (
-            <ResultView draft={draft} onChange={setDraft} onAdd={handleAdd} />
           ) : (
             <EmptyState />
           )}
@@ -184,27 +123,57 @@ export default function Screener({ nav, onAddToTracker }) {
           right edge of the same row. Below `sm` there is not enough width for
           both, so the mark drops to its own centered line underneath. */}
       <div className="relative mt-5 flex shrink-0 flex-col items-center gap-4 sm:block sm:text-center">
-        <button
-          type="button"
-          onClick={handleAnalyze}
-          className="btn-accent rounded-full px-8 py-2.5 text-body font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300"
-          disabled={jobDescription.trim().length === 0 || loading}
-        >
-          {loading ? "Analyzing…" : "Analyze"}
-        </button>
+        {loading ? (
+          <button
+            type="button"
+            onClick={cancel}
+            className="btn-block focus-ring rounded-full border-2 border-gray-200 bg-white px-8 text-ink transition-colors hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={analyze}
+            className="btn-accent btn-pill focus-ring text-white"
+            disabled={jobDescription.trim().length === 0 || overLimit}
+          >
+            Analyze
+          </button>
+        )}
         <BrandMark className="sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2" />
       </div>
-    </div>
+    </ViewShell>
   );
 }
 
-function ResultView({ draft, onChange, onAdd }) {
+function ResultView({ draft, onChange, onAdd, error, onDismissError }) {
   const [showReasons, setShowReasons] = useState(false);
 
   return (
     <>
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
         <div className={MEASURE}>
+          {error && (
+            <div
+              role="alert"
+              className="mb-5 flex items-start justify-between gap-3 rounded-lg bg-[#fee2e2] px-3.5 py-3"
+            >
+              <p className="text-body text-red-900">
+                <span className="font-semibold">That retry failed.</span>{" "}
+                {error}
+              </p>
+              <button
+                type="button"
+                onClick={onDismissError}
+                aria-label="Dismiss"
+                className="focus-ring shrink-0 rounded-md p-1 text-red-900 transition-colors hover:bg-red-900/10"
+              >
+                <CloseGlyph />
+              </button>
+            </div>
+          )}
+
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <VerdictBadge verdict={draft.verdict} />
@@ -213,7 +182,7 @@ function ResultView({ draft, onChange, onAdd }) {
             <button
               type="button"
               onClick={() => setShowReasons(true)}
-              className="text-body font-medium text-muted underline-offset-2 hover:text-ink hover:underline"
+              className="focus-ring rounded-md text-body font-medium text-muted underline-offset-2 hover:text-ink hover:underline"
             >
               Why this verdict?
             </button>
@@ -227,10 +196,7 @@ function ResultView({ draft, onChange, onAdd }) {
         <button
           type="button"
           onClick={onAdd}
-          className={
-            "btn-accent block rounded-lg px-4 py-2.5 text-body font-medium text-white " +
-            MEASURE
-          }
+          className={"btn-accent btn-block focus-ring block text-white " + MEASURE}
         >
           Add to Tracker →
         </button>
@@ -250,7 +216,7 @@ function ResultView({ draft, onChange, onAdd }) {
 function EmptyState() {
   return (
     <div className="flex flex-1 items-center justify-center px-5 py-16 text-center">
-      <p className="max-w-xs text-label text-muted">
+      <p className="max-w-sm text-label text-muted">
         Paste a job description and press Analyze.
       </p>
     </div>
@@ -263,9 +229,14 @@ function LoadingState() {
       className={"flex w-full flex-1 flex-col gap-6 px-5 py-5 " + MEASURE}
       aria-busy="true"
     >
+      {/* Sized to the real badge row (36px) and its priority chip, so the panel
+          does not reflow when the result lands. */}
       <div className="flex items-center justify-between">
-        <div className="h-8 w-28 animate-pulse rounded-full bg-gray-100" />
-        <div className="h-3 w-20 animate-pulse rounded bg-gray-100" />
+        <div className="flex items-center gap-2">
+          <div className="h-9 w-28 animate-pulse rounded-full bg-gray-100" />
+          <div className="h-6 w-20 animate-pulse rounded-full bg-gray-100" />
+        </div>
+        <div className="h-3 w-24 animate-pulse rounded bg-gray-100" />
       </div>
       {[0, 1, 2, 3].map((i) => (
         <div key={i} className="space-y-2">
@@ -281,16 +252,19 @@ function LoadingState() {
 }
 
 function ErrorState({ message }) {
+  // "Check that the backend is running" is wrong advice for a rate limit, which
+  // is the failure a user is most likely to meet, so the hint follows the cause.
+  const throttled = /too many/i.test(message);
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-5 py-16 text-center">
       <div className="rounded-full bg-[#fee2e2] px-3.5 py-1.5 text-body font-semibold text-red-900">
         Analysis failed
       </div>
-      <p className="max-w-sm text-body leading-relaxed text-muted">
-        {message}
-      </p>
+      <p className="max-w-sm text-body leading-relaxed text-muted">{message}</p>
       <p className="text-label text-muted">
-        Check that the backend is running, then press Analyze again.
+        {throttled
+          ? "Give it a minute, then press Analyze again."
+          : "Check that the backend is running, then press Analyze again."}
       </p>
     </div>
   );
