@@ -30,10 +30,14 @@ function asString(value) {
 /** Coerce anything loaded from storage (or handed over by the screener) into a valid card. */
 function normalizeCard(raw) {
   if (!raw || typeof raw !== "object") return null;
+  // Settle the verdict before anything reads it. Deriving a priority from the
+  // raw value instead would send an unrecognized verdict down the red branch,
+  // so a card missing its verdict would render a yellow badge next to "D Skip".
+  const verdict = VERDICTS.includes(raw.verdict) ? raw.verdict : "yellow";
   return {
     id: asString(raw.id) || newId(),
     column: COLUMN_IDS.includes(raw.column) ? raw.column : "saved",
-    verdict: VERDICTS.includes(raw.verdict) ? raw.verdict : "yellow",
+    verdict,
     // Stored as { tag, detected_phrase } objects, matching the backend shape.
     verdict_reasons: Array.isArray(raw.verdict_reasons)
       ? raw.verdict_reasons.filter((reason) => reason && typeof reason === "object")
@@ -48,7 +52,7 @@ function normalizeCard(raw) {
     // Cards saved before priority existed get one derived from what they stored.
     priority: PRIORITIES.includes(raw.priority)
       ? raw.priority
-      : derivePriority(raw.verdict, raw.verdict_reasons),
+      : derivePriority(verdict, raw.verdict_reasons),
     notes: asString(raw.notes),
     created_at: asString(raw.created_at) || new Date().toISOString(),
   };
@@ -87,6 +91,20 @@ export default function useCards() {
       // Out of quota or private-mode storage: keep working in memory.
     }
   }, [cards]);
+
+  // localStorage is the only copy of this data, and a second tab writing its
+  // own stale array would silently drop cards added here. The storage event
+  // fires in every other tab on the origin, so adopt their write instead of
+  // racing it.
+  useEffect(() => {
+    function onStorage(event) {
+      if (event.key !== null && event.key !== STORAGE_KEY) return;
+      hydrated.current = false;
+      setCards(loadCards());
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   const addCard = useCallback((draft) => {
     const card = normalizeCard({
